@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+
+{% block title %}حجز جديد{% endblock %}
+
+{% block extra_css %}
+<style>
+    .booking-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: calc(100vh - 56px);
+        padding: 20px 0;
+    }
+
+    .booking-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+
+    .form-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 20px;
+    }
+
+    .room-selection {
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .room-selection:hover {
+        border-color: #667eea;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15);
+    }
+
+    .room-selection.selected {
+        border-color: #667eea;
+        background-color: #f8f9ff;
+    }
+
+    .room-details {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .room-price {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+    }
+
+    .form-control {
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        padding: 12px 15px;
+        font-size: 14px;
+    }
+
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-weight: bold;
+        width: 100%;
+    }
+
+    .btn-cancel {
+        background: #6c757d;
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-weight: bold;
+        width: 100%;
+    }
+
+    .duration-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .duration-btn {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .duration-btn:hover,
+    .duration-btn.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+
+    .cost-preview {
+        background: #f8f9ff;
+        border: 1px solid #667eea;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 20px;
+    }
+
+    .cost-details {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+
+    .total-cost {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #667eea;
+        border-top: 1px solid #dee2e6;
+        padding-top: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="booking-container">
+    <div class="container">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="text-center text-white">
+                    <h2>
+                        <i class="fas fa-calendar-plus me-2"></i>
+                        حجز جديد
+                    </h2>
+                    <p class="mb-0">اختر الغرفة المناسبة وأدخل تفاصيل الحجز</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking Form -->
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="form-card">
+                    <form method="POST" id="bookingForm">
+                        <!-- Room Selection -->
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-door-open me-2"></i>
+                                اختر الغرفة
+                            </label>
+
+                            {% if rooms %}
+                            <div class="row">
+                                {% for room in rooms %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="room-selection" data-room-id="{{ room.id }}"
+                                        data-room-rate="{{ room.hourly_rate }}">
+                                        <input type="radio" name="room_id" value="{{ room.id }}" id="room_{{ room.id }}"
+                                            class="d-none" required>
+                                        <div class="room-details">
+                                            <div>
+                                                <h6 class="mb-1">{{ room.name }}</h6>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-users me-1"></i>
+                                                    {{ room.capacity }} أشخاص
+                                                </small>
+                                            </div>
+                                            <div class="room-price">
+                                                {{ room.hourly_rate }} ريال/ساعة
+                                            </div>
+                                        </div>
+                                        {% if room.amenities %}
+                                        <div class="mt-2">
+                                            {% for amenity in room.amenities %}
+                                            <span class="badge bg-light text-dark me-1">{{ amenity }}</span>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                لا توجد غرف متاحة حالياً
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Customer Information -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="customer_name" class="form-label">
+                                        <i class="fas fa-user me-2"></i>
+                                        اسم العميل
+                                    </label>
+                                    <input type="text" class="form-control" id="customer_name" name="customer_name"
+                                        placeholder="أدخل اسم العميل" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="customer_phone" class="form-label">
+                                        <i class="fas fa-phone me-2"></i>
+                                        رقم الهاتف
+                                    </label>
+                                    <input type="tel" class="form-control" id="customer_phone" name="customer_phone"
+                                        placeholder="05xxxxxxxx" pattern="[0-9]{10}" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Booking Time -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="start_time" class="form-label">
+                                        <i class="fas fa-clock me-2"></i>
+                                        وقت بداية الحجز
+                                    </label>
+                                    <input type="datetime-local" class="form-control" id="start_time" name="start_time"
+                                        required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="duration_hours" class="form-label">
+                                        <i class="fas fa-hourglass-half me-2"></i>
+                                        مدة الحجز (بالساعات)
+                                    </label>
+                                    <input type="number" class="form-control" id="duration_hours" name="duration_hours"
+                                        min="0.5" max="24" step="0.5" value="1" required>
+
+                                    <!-- Quick Duration Selection -->
+                                    <div class="duration-options">
+                                        <div class="duration-btn" data-hours="1">ساعة</div>
+                                        <div class="duration-btn" data-hours="2">ساعتان</div>
+                                        <div class="duration-btn" data-hours="3">3 ساعات</div>
+                                        <div class="duration-btn" data-hours="4">4 ساعات</div>
+                                        <div class="duration-btn" data-hours="6">6 ساعات</div>
+                                        <div class="duration-btn" data-hours="8">8 ساعات</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cost Preview -->
+                        <div class="cost-preview" id="costPreview" style="display: none;">
+                            <h6 class="mb-3">
+                                <i class="fas fa-calculator me-2"></i>
+                                معاينة التكلفة
+                            </h6>
+                            <div class="cost-details">
+                                <span>المدة:</span>
+                                <span id="previewDuration">-</span>
+                            </div>
+                            <div class="cost-details">
+                                <span>سعر الساعة:</span>
+                                <span id="previewRate">-</span>
+                            </div>
+                            <div class="cost-details total-cost">
+                                <span>إجمالي التكلفة:</span>
+                                <span id="previewTotal">-</span>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="row mt-4">
+                            <div class="col-md-6 mb-2">
+                                <a href="{{ url_for('booking.index') }}" class="btn btn-cancel">
+                                    <i class="fas fa-times me-2"></i>
+                                    إلغاء
+                                </a>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <button type="submit" class="btn btn-submit">
+                                    <i class="fas fa-check me-2"></i>
+                                    تأكيد الحجز
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function () {
+        let selectedRoomRate = 0;
+
+        // Room selection
+        $('.room-selection').click(function () {
+            $('.room-selection').removeClass('selected');
+            $(this).addClass('selected');
+            $(this).find('input[type="radio"]').prop('checked', true);
+            selectedRoomRate = parseFloat($(this).data('room-rate'));
+            updateCostPreview();
+        });
+
+        // Duration quick selection
+        $('.duration-btn').click(function () {
+            $('.duration-btn').removeClass('active');
+            $(this).addClass('active');
+            const hours = $(this).data('hours');
+            $('#duration_hours').val(hours);
+            updateCostPreview();
+        });
+
+        // Duration input change
+        $('#duration_hours').on('input', function () {
+            $('.duration-btn').removeClass('active');
+            updateCostPreview();
+        });
+
+        // Start time change
+        $('#start_time').on('change', function () {
+            updateCostPreview();
+        });
+
+        function updateCostPreview() {
+            const duration = parseFloat($('#duration_hours').val()) || 0;
+            const startTime = $('#start_time').val();
+
+            if (selectedRoomRate > 0 && duration > 0 && startTime) {
+                const totalCost = selectedRoomRate * duration;
+
+                $('#previewDuration').text(duration + ' ساعة');
+                $('#previewRate').text(selectedRoomRate + ' ريال/ساعة');
+                $('#previewTotal').text(totalCost.toFixed(2) + ' ريال');
+                $('#costPreview').show();
+            } else {
+                $('#costPreview').hide();
+            }
+        }
+
+        // Set minimum start time to current time
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+        $('#start_time').attr('min', minDateTime);
+
+        // Form validation
+        $('#bookingForm').on('submit', function (e) {
+            if (!$('input[name="room_id"]:checked').length) {
+                e.preventDefault();
+                alert('يرجى اختيار غرفة');
+                return false;
+            }
+
+            const duration = parseFloat($('#duration_hours').val());
+            if (duration < 0.5) {
+                e.preventDefault();
+                alert('الحد الأدنى للحجز هو نصف ساعة');
+                return false;
+            }
+
+            const startTime = new Date($('#start_time').val());
+            const now = new Date();
+            if (startTime < now) {
+                e.preventDefault();
+                alert('لا يمكن حجز وقت في الماضي');
+                return false;
+            }
+        });
+
+        // Phone validation
+        $('#customer_phone').on('input', function () {
+            let value = $(this).val().replace(/\D/g, '');
+            if (value.length > 10) {
+                value = value.substring(0, 10);
+            }
+            $(this).val(value);
+        });
+    });
+</script>
+{% endblock %}

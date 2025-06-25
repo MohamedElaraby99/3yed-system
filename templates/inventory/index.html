@@ -1,0 +1,451 @@
+﻿{% extends "base.html" %}
+
+{% block title %}إدارة المخزون{% endblock %}
+
+{% block extra_css %}
+<style>
+    .inventory-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 30px 0;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+
+    .stats-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #28a745;
+        margin-bottom: 20px;
+        transition: transform 0.3s ease;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .stats-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #28a745;
+    }
+
+    .stats-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .product-card {
+        background: white;
+        border-radius: 10px;
+        border: 1px solid #e9ecef;
+        margin-bottom: 15px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .product-card:hover {
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .product-header {
+        padding: 15px 20px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .product-info {
+        padding: 15px 20px;
+    }
+
+    .stock-badge {
+        font-size: 0.85rem;
+        padding: 5px 12px;
+        border-radius: 15px;
+    }
+
+    .stock-high {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .stock-medium {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+
+    .stock-low {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    .stock-out {
+        background-color: #f5c6cb;
+        color: #721c24;
+    }
+
+    .action-buttons .btn {
+        margin: 2px;
+        padding: 5px 12px;
+        font-size: 0.85rem;
+    }
+
+    .search-container {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .filter-tabs {
+        margin-bottom: 20px;
+    }
+
+    .filter-tabs .btn {
+        border-radius: 20px;
+        margin-right: 10px;
+        margin-bottom: 10px;
+    }
+
+    .alert-item {
+        border-radius: 8px;
+        border: none;
+        margin-bottom: 10px;
+    }
+
+    .price-display {
+        font-weight: bold;
+        color: #28a745;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="inventory-header text-center">
+        <div class="container">
+            <h1 class="display-6 fw-bold">
+                <i class="fas fa-boxes me-3"></i>
+                إدارة المخزون
+            </h1>
+            <p class="lead mb-0">مراقبة وإدارة المخزون والمنتجات</p>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="stats-card text-center">
+                <div class="stats-number">{{ total_products }}</div>
+                <div class="stats-label">إجمالي المنتجات</div>
+                <i class="fas fa-cubes text-success fa-2x mt-2"></i>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stats-card text-center">
+                <div class="stats-number">{{ products|selectattr('is_available')|list|length }}</div>
+                <div class="stats-label">منتجات متاحة</div>
+                <i class="fas fa-check-circle text-success fa-2x mt-2"></i>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stats-card text-center">
+                <div class="stats-number text-warning">{{ low_stock_count }}</div>
+                <div class="stats-label">مخزون منخفض</div>
+                <i class="fas fa-exclamation-triangle text-warning fa-2x mt-2"></i>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stats-card text-center">
+                <div class="stats-number text-danger">{{ out_of_stock }}</div>
+                <div class="stats-label">نفد المخزون</div>
+                <i class="fas fa-times-circle text-danger fa-2x mt-2"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="search-container">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h5 class="mb-3">
+                            <i class="fas fa-search me-2"></i>
+                            البحث والتصفية
+                        </h5>
+                        <div class="input-group">
+                            <input type="text" id="searchInput" class="form-control" placeholder="البحث في المنتجات...">
+                            <button class="btn btn-outline-success" type="button">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <div class="btn-group" role="group">
+                            <a href="{{ url_for('inventory.new_product') }}" class="btn btn-success">
+                                <i class="fas fa-plus me-2"></i>
+                                منتج جديد
+                            </a>
+                            <a href="{{ url_for('inventory.stock_adjustment') }}" class="btn btn-primary">
+                                <i class="fas fa-edit me-2"></i>
+                                تعديل مخزون
+                            </a>
+                            <a href="{{ url_for('inventory.new_purchase') }}" class="btn btn-info">
+                                <i class="fas fa-shopping-cart me-2"></i>
+                                مشتريات جديدة
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter Tabs -->
+                <div class="filter-tabs mt-3">
+                    <button class="btn btn-outline-secondary active" data-filter="all">
+                        <i class="fas fa-list me-1"></i>
+                        جميع المنتجات
+                    </button>
+                    <button class="btn btn-outline-warning" data-filter="low-stock">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        مخزون منخفض
+                    </button>
+                    <button class="btn btn-outline-danger" data-filter="out-of-stock">
+                        <i class="fas fa-times-circle me-1"></i>
+                        نفد المخزون
+                    </button>
+                    <button class="btn btn-outline-success" data-filter="available">
+                        <i class="fas fa-check-circle me-1"></i>
+                        متاح للبيع
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Low Stock Alerts -->
+    {% if low_stock %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-warning">
+                <h6 class="alert-heading">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    تنبيه: منتجات بمخزون منخفض
+                </h6>
+                <div class="row">
+                    {% for product in low_stock %}
+                    <div class="col-md-4 mb-2">
+                        <div class="alert-item alert-warning">
+                            <strong>{{ product.name_ar }}</strong><br>
+                            <small>المخزون: {{ product.stock_quantity }} {{ product.unit }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Products Grid -->
+    <div class="row" id="productsContainer">
+        {% for product in products %}
+        <div class="col-lg-6 col-xl-4 product-item" data-name="{{ product.name_ar|lower }}"
+            data-category="{{ product.category.name_ar|lower }}" data-available="{{ product.is_available|lower }}"
+            data-stock-status="{% if product.stock_quantity == 0 %}out-of-stock{% elif product.stock_quantity <= product.min_stock_level %}low-stock{% else %}normal{% endif %}">
+            <div class="product-card">
+                <div class="product-header">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">{{ product.name_ar }}</h6>
+                            <small class="text-muted">{{ product.category.name_ar }}</small>
+                        </div>
+                        <div>
+                            {% if product.stock_quantity == 0 %}
+                            <span class="stock-badge stock-out">نفد المخزون</span>
+                            {% elif product.stock_quantity <= product.min_stock_level %} <span
+                                class="stock-badge stock-low">مخزون منخفض</span>
+                                {% elif product.stock_quantity <= (product.min_stock_level * 2) %} <span
+                                    class="stock-badge stock-medium">مخزون متوسط</span>
+                                    {% else %}
+                                    <span class="stock-badge stock-high">مخزون جيد</span>
+                                    {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="product-info">
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted">الكمية المتاحة</small>
+                            <div class="fw-bold">{{ product.stock_quantity }} {{ product.unit }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">السعر</small>
+                            <div class="price-display">{{ "%.2f"|format(product.price) }} ريال</div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-2">
+                        <div class="col-6">
+                            <small class="text-muted">الحد الأدنى</small>
+                            <div>{{ product.min_stock_level }} {{ product.unit }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">وقت التحضير</small>
+                            <div>{{ product.preparation_time }} دقيقة</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 d-flex justify-content-between align-items-center">
+                        <div>
+                            {% if product.is_available %}
+                            <span class="badge bg-success">متاح</span>
+                            {% else %}
+                            <span class="badge bg-secondary">غير متاح</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="action-buttons">
+                            <a href="{{ url_for('inventory.edit_product', product_id=product.id) }}"
+                                class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{{ url_for('inventory.product_stock_history', product_id=product.id) }}"
+                                class="btn btn-sm btn-outline-info">
+                                <i class="fas fa-history"></i>
+                            </a>
+                            <button class="btn btn-sm btn-outline-success"
+                                onclick="adjustStock({{ product.id }}, '{{ product.name_ar }}')">
+                                <i class="fas fa-plus-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Empty State -->
+    {% if not products %}
+    <div class="row">
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="fas fa-boxes fa-5x text-muted mb-3"></i>
+                <h4 class="text-muted">لا توجد منتجات</h4>
+                <p class="text-muted">ابدأ بإضافة منتجات جديدة لمتجرك</p>
+                <a href="{{ url_for('inventory.new_product') }}" class="btn btn-success">
+                    <i class="fas fa-plus me-2"></i>
+                    إضافة منتج جديد
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Stock Adjustment Modal -->
+<div class="modal fade" id="stockAdjustmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تعديل المخزون</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="stockAdjustmentForm">
+                    <input type="hidden" id="modalProductId" name="product_id">
+                    <div class="mb-3">
+                        <label class="form-label">المنتج</label>
+                        <input type="text" id="modalProductName" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">نوع التعديل</label>
+                        <select class="form-select" name="adjustment_type" required>
+                            <option value="add">إضافة للمخزون</option>
+                            <option value="subtract">خصم من المخزون</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الكمية</label>
+                        <input type="number" class="form-control" name="quantity" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ملاحظات</label>
+                        <textarea class="form-control" name="notes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="submit" form="stockAdjustmentForm" class="btn btn-primary">حفظ التعديل</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(docum    ent).ready(function() {
+     //         ch functionality
+    $('        rchInput').on('input', function() {
+                    earchTerm = $(this).val().toLowerCase();
+                   roducts();
+    });          //         er tabs
+    $('        ter-tabs .btn').click(function() {
+                    ter-tabs .btn').removeClass('active');
+                   .addClass('active');
+                   roducts();
+    });          fun        n filterProducts() {
+                   earchTerm = $('#searchInput').val().toLowerCase();
+                   ctiveFilter = $('.filter-tabs .btn.active').data('filter');
+                    duct-item').each(function() {
+                        item = $(this);
+                       ame = $item.data('name');
+                       ategory = $item.data('category');
+                       vailable = $item.data('available');
+                       tockStatus = $item.data('stock-status');
+                        wItem = true;
+                        ch filter
+                       rchTerm && !name.includes(searchTerm) && !category.includes(searchTerm)) {
+                           m = false;
+                                          k filter
+                       iveFilter !== 'all') {
+                           iveFilter === 'low-stock' && stockStatus !== 'low-stock') {
+                               m = false;
+                           if (activeFilter === 'out-of-stock' && stockStatus !== 'out-of-stock') {
+                               m = false;
+                           if (activeFilter === 'available' && available !== 'true') {
+                               m = false;
+                                                                wItem) {
+                           how();
+                       {
+                           ide();
+                                      }
+
+        //         k adjustment form submission
+    $('        ckAdjustmentForm').on('submit', function(e) {
+                    ntDefault();
+                    {
+                       { url_for("inventory.stock_adjustment") }}',
+                        'POST',
+                       (this).serialize(),
+                       : function(respon se) {
+                           ckAdjustmentModal').modal('hide');
+                           n.reload();
+                                          function() {
+                            حدث خطأ في تعديل المخزون');
+                                      });        
+
+fu    nctio    n adjustStock(productId, productName) {
+    $('        alProductId').val(productId);
+    $('        alProductName').val(productName);
+    $('        ckAdjustmentModal').modal('show');
+}
+</script>
+{% endblock %}

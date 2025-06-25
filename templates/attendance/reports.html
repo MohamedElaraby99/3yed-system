@@ -1,0 +1,534 @@
+﻿{% extends "base.html" %}
+
+{% block title %}تقارير الحضور والانصراف{% endblock %}
+
+{% block content %}
+<div class="container-fluid" dir="rtl">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0" style="color: #6f42c1;">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    تقارير الحضور والانصراف
+                </h2>
+                <div class="btn-group">
+                    <a href="{{ url_for('attendance.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-right me-2"></i>
+                        العودة للحضور
+                    </a>
+                    <button class="btn btn-success" onclick="exportToExcel()">
+                        <i class="fas fa-file-excel me-2"></i>
+                        تصدير Excel
+                    </button>
+                    <button class="btn btn-primary" onclick="printReport()">
+                        <i class="fas fa-print me-2"></i>
+                        طباعة التقرير
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filters Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header" style="background: linear-gradient(135deg, #6f42c1, #9b59b6);">
+                    <h5 class="card-title text-white mb-0">
+                        <i class="fas fa-filter me-2"></i>
+                        فلاتر التقرير
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" class="row align-items-end">
+                        <div class="col-md-3">
+                            <label for="start_date" class="form-label fw-bold">من تاريخ</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date"
+                                value="{{ start_date }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="end_date" class="form-label fw-bold">إلى تاريخ</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date"
+                                value="{{ end_date }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="employee_id" class="form-label fw-bold">الموظف</label>
+                            <select class="form-select" id="employee_id" name="employee_id">
+                                <option value="">جميع الموظفين</option>
+                                {% for employee in employees %}
+                                <option value="{{ employee.id }}" {% if employee.id|string==employee_id %}selected{%
+                                    endif %}>
+                                    {{ employee.first_name }} {{ employee.last_name }} - {{ employee.user_role.name_ar
+                                    }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search me-2"></i>
+                                بحث
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Statistics Overview -->
+            {% if stats %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        إحصائيات عامة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for emp_id, stat in stats.items() %}
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-12 mb-3">
+                            <div class="card h-100 border-start border-5" style="border-color: #6f42c1 !important;">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm me-3">
+                                            <div class="avatar-title rounded-circle bg-light text-primary">
+                                                {{ stat.employee.first_name[0] }}{{ stat.employee.last_name[0] }}
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">{{ stat.employee.first_name }} {{ stat.employee.last_name
+                                                }}</h6>
+                                            <small class="text-muted">{{ stat.employee.user_role.name_ar }}</small>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <div class="row text-center">
+                                            <div class="col-6">
+                                                <div class="border-end">
+                                                    <h5 class="text-success mb-0">{{ stat.present_days }}</h5>
+                                                    <small class="text-muted">حضور</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <h5 class="text-danger mb-0">{{ stat.absent_days }}</h5>
+                                                <small class="text-muted">غياب</small>
+                                            </div>
+                                        </div>
+                                        <div class="row text-center mt-2">
+                                            <div class="col-6">
+                                                <div class="border-end">
+                                                    <h6 class="text-warning mb-0">{{ stat.late_days }}</h6>
+                                                    <small class="text-muted">تأخير</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <h6 class="text-info mb-0">{{ "%.1f"|format(stat.total_hours) }}</h6>
+                                                <small class="text-muted">ساعة</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Detailed Records -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-table me-2"></i>
+                            سجلات الحضور التفصيلية
+                        </h5>
+                        <div class="input-group" style="max-width: 300px;">
+                            <input type="text" class="form-control" id="searchInput" placeholder="البحث في السجلات...">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if attendance_records %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="attendanceTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>التاريخ</th>
+                                    <th>الموظف</th>
+                                    <th>الدور</th>
+                                    <th>وقت الدخول</th>
+                                    <th>وقت الخروج</th>
+                                    <th>ساعات العمل</th>
+                                    <th>الحالة</th>
+                                    <th>ملاحظات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record, user in attendance_records %}
+                                <tr class="record-row" data-employee-name="{{ user.first_name }} {{ user.last_name }}"
+                                    data-date="{{ record.date.strftime('%Y-%m-%d') }}">
+                                    <td>
+                                        <span class="fw-bold">{{ record.date.strftime('%Y-%m-%d') }}</span>
+                                        <small class="d-block text-muted">{{ record.date.strftime('%A') }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-xs me-2">
+                                                <div class="avatar-title rounded-circle bg-primary text-white">
+                                                    {{ user.first_name[0] }}{{ user.last_name[0] }}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0">{{ user.first_name }} {{ user.last_name }}</h6>
+                                                <small class="text-muted">{{ user.employee_id or 'لا يوجد' }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ user.user_role.name_ar }}</span>
+                                    </td>
+                                    <td>
+                                        {% if record.check_in %}
+                                        <span class="text-success">
+                                            <i class="fas fa-sign-in-alt me-1"></i>
+                                            {{ record.check_in.strftime('%H:%M') }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.check_out %}
+                                        <span class="text-danger">
+                                            <i class="fas fa-sign-out-alt me-1"></i>
+                                            {{ record.check_out.strftime('%H:%M') }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.total_hours %}
+                                        <span class="badge bg-info">
+                                            {{ "%.1f"|format(record.total_hours) }} ساعة
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.status == 'present' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>حاضر
+                                        </span>
+                                        {% elif record.status == 'absent' %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times me-1"></i>غائب
+                                        </span>
+                                        {% elif record.status == 'late' %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-clock me-1"></i>متأخر
+                                        </span>
+                                        {% elif record.status == 'early_leave' %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-door-open me-1"></i>انصراف مبكر
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ record.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.notes %}
+                                        <span class="text-truncate" style="max-width: 150px;"
+                                            title="{{ record.notes }}">
+                                            {{ record.notes }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">لا توجد سجلات</h4>
+                        <p class="text-muted">لم يتم العثور على سجلات حضور للفترة المحددة</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Print Modal -->
+<div class="modal fade" id="printModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">معاينة طباعة التقرير</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="printContent" class="print-content"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-primary" onclick="executePrint()">
+                    <i class="fas fa-print me-2"></i>طباعة
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('input', function () {
+        const searchTerm = this.value.toLowerCase();
+        const rows = document.querySelectorAll('.record-row');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const employeeName = row.getAttribute('data-employee-name').toLowerCase();
+            const date = row.getAttribute('data-date');
+
+            if (employeeName.includes(searchTerm) || date.includes(searchTerm)) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+
+    // Date range shortcuts
+    function setDateRange(days) {
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(endDate.getDate() - days);
+
+        document.getElementById('end_date').value = endDate.toISOString().split('T')[0];
+        document.getElementById('start_date').value = startDate.toISOString().split('T')[0];
+    }
+
+    // Export to Excel
+    function exportToExcel() {
+        const table = document.getElementById('attendanceTable');
+        const wb = XLSX.utils.table_to_book(table, { sheet: "تقرير الحضور" });
+        const filename = `تقرير_الحضور_${document.getElementById('start_date').value}_${document.getElementById('end_date').value}.xlsx`;
+        XLSX.writeFile(wb, filename);
+    }
+
+    // Print functionality
+    function printReport() {
+        const content = createPrintContent();
+        document.getElementById('printContent').innerHTML = content;
+        const modal = new bootstrap.Modal(document.getElementById('printModal'));
+        modal.show();
+    }
+
+    function createPrintContent() {
+        const startDate = document.getElementById('start_date').value;
+        const endDate = document.getElementById('end_date').value;
+        const selectedEmployee = document.getElementById('employee_id');
+        const employeeName = selectedEmployee.selectedIndex > 0 ? selectedEmployee.options[selectedEmployee.selectedIndex].text : 'جميع الموظفين';
+
+        let content = `
+        <div class="print-header text-center mb-4">
+            <h2>تقرير الحضور والانصراف</h2>
+            <p><strong>الفترة:</strong> من ${startDate} إلى ${endDate}</p>
+            <p><strong>الموظف:</strong> ${employeeName}</p>
+            <p><strong>تاريخ التقرير:</strong> ${new Date().toLocaleDateString('ar-SA')}</p>
+        </div>
+    `;
+
+        // Add statistics if available
+        {% if stats %}
+        content += `
+        <div class="print-stats mb-4">
+            <h4>الإحصائيات</h4>
+            <div class="row">
+    `;
+
+        {% for emp_id, stat in stats.items() %}
+        content += `
+        <div class="col-md-6 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6>{{ stat.employee.first_name }} {{ stat.employee.last_name }}</h6>
+                    <p>الحضور: {{ stat.present_days }} | الغياب: {{ stat.absent_days }} | التأخير: {{ stat.late_days }}</p>
+                    <p>إجمالي الساعات: {{ "%.1f"|format(stat.total_hours) }} ساعة</p>
+                </div>
+            </div>
+        </div>
+    `;
+        {% endfor %}
+
+        content += `
+            </div>
+        </div>
+    `;
+        {% endif %}
+
+        // Add table
+        const table = document.getElementById('attendanceTable').cloneNode(true);
+        // Remove any hidden rows
+        const hiddenRows = table.querySelectorAll('tr[style*="none"]');
+        hiddenRows.forEach(row => row.remove());
+
+        content += `
+        <div class="print-table">
+            <h4>السجلات التفصيلية</h4>
+            ${table.outerHTML}
+        </div>
+    `;
+
+        return content;
+    }
+
+    function executePrint() {
+        const printContent = document.getElementById('printContent').innerHTML;
+        const printWindow = window.open('', '_blank');
+
+        printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>تقرير الحضور والانصراف</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; direction: rtl; }
+                .print-header { border-bottom: 2px solid #6f42c1; padding-bottom: 15px; }
+                .print-stats .card { border: 1px solid #ddd; margin-bottom: 10px; }
+                .print-stats .card-body { padding: 10px; }
+                .print-table table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                .print-table th, .print-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+                .print-table th { background-color: #f8f9fa; font-weight: bold; }
+                .badge { padding: 3px 6px; border-radius: 4px; font-size: 12px; }
+                .bg-success { background-color: #28a745; color: white; }
+                .bg-danger { background-color: #dc3545; color: white; }
+                .bg-warning { background-color: #ffc107; color: black; }
+                .bg-info { background-color: #17a2b8; color: white; }
+                .bg-secondary { background-color: #6c757d; color: white; }
+                @media print {
+                    body { margin: 0; }
+                    .print-header { page-break-after: avoid; }
+                }
+            </style>
+        </head>
+        <body>
+            ${printContent}
+        </body>
+        </html>
+    `);
+
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('printModal'));
+        modal.hide();
+    }
+
+    // Add quick date range buttons
+    document.addEventListener('DOMContentLoaded', function () {
+        const filterCard = document.querySelector('.card-body');
+        const quickButtons = document.createElement('div');
+        quickButtons.className = 'row mt-3';
+        quickButtons.innerHTML = `
+        <div class="col-12">
+            <label class="form-label fw-bold">اختصارات سريعة:</label>
+            <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-secondary" onclick="setDateRange(7)">آخر 7 أيام</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="setDateRange(30)">آخر 30 يوم</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="setDateRange(90)">آخر 3 شهور</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="setDateRange(365)">آخر سنة</button>
+            </div>
+        </div>
+    `;
+        filterCard.appendChild(quickButtons);
+    });
+</script>
+
+<!-- Include SheetJS for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+    .avatar-sm {
+        width: 40px;
+        height: 40px;
+    }
+
+    .avatar-xs {
+        width: 32px;
+        height: 32px;
+    }
+
+    .avatar-title {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.875rem;
+    }
+
+    .card {
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+
+    .card-header {
+        border-bottom: 3px solid #6f42c1;
+    }
+
+    .table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .table td {
+        vertical-align: middle;
+    }
+
+    .record-row:hover {
+        background-color: #f8f9fa;
+    }
+
+    .text-truncate {
+        display: inline-block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .print-content {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    @media (max-width: 768px) {
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+
+        .btn-group {
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .btn-group .btn {
+            width: 100%;
+        }
+    }

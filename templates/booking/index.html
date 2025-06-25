@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+
+{% block title %}إدارة الحجوزات{% endblock %}
+
+{% block extra_css %}
+<style>
+    .booking-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: calc(100vh - 56px);
+        padding: 20px 0;
+    }
+
+    .booking-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+
+    .room-card {
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+        position: relative;
+    }
+
+    .room-card:hover {
+        border-color: #667eea;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+    }
+
+    .room-card.available {
+        border-right: 4px solid #28a745;
+    }
+
+    .room-card.occupied {
+        border-right: 4px solid #dc3545;
+    }
+
+    .booking-item {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-right: 4px solid #667eea;
+    }
+
+    .booking-status {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .status-active {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .status-completed {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .status-cancelled {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    .btn-new-booking {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        color: white;
+        padding: 12px 25px;
+        border-radius: 25px;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+
+    .room-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .room-price {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+
+    .room-amenities {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 10px;
+    }
+
+    .amenity-tag {
+        background: #e9ecef;
+        color: #495057;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+    }
+
+    .availability-indicator {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+
+    .available-indicator {
+        background-color: #28a745;
+    }
+
+    .occupied-indicator {
+        background-color: #dc3545;
+    }
+
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>
+                <i class="fas fa-calendar-alt me-2"></i>
+                إدارة الحجوزات
+            </h2>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('booking.new_booking') }}" class="btn btn-success">
+                <i class="fas fa-plus me-2"></i>
+                حجز جديد
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-primary">{{ rooms|length }}</h4>
+                    <p class="mb-0">إجمالي الغرف</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-success">{{ rooms|selectattr('is_available')|list|length }}</h4>
+                    <p class="mb-0">الغرف المتاحة</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-warning">{{ active_bookings|length }}</h4>
+                    <p class="mb-0">الحجوزات النشطة</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-info">{{ active_bookings|sum(attribute='total_cost')|round(2) if active_bookings
+                        else 0 }}</h4>
+                    <p class="mb-0">إجمالي الإيرادات (ريال)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- الغرف -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-door-open me-2"></i>
+                        الغرف المتاحة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if rooms %}
+                    <div class="row">
+                        {% for room in rooms %}
+                        <div class="col-md-6 mb-3">
+                            <div
+                                class="card border {% if room.is_available %}border-success{% else %}border-danger{% endif %}">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="card-title">{{ room.name }}</h6>
+                                        <span
+                                            class="badge {% if room.is_available %}bg-success{% else %}bg-danger{% endif %}">
+                                            {% if room.is_available %}متاحة{% else %}محجوزة{% endif %}
+                                        </span>
+                                    </div>
+
+                                    <p class="card-text">
+                                        <i class="fas fa-users me-1"></i>
+                                        السعة: {{ room.capacity }} أشخاص
+                                    </p>
+
+                                    <p class="card-text">
+                                        <i class="fas fa-money-bill me-1"></i>
+                                        {{ room.hourly_rate }} ريال/ساعة
+                                    </p>
+
+                                    {% if room.amenities %}
+                                    <div class="mb-2">
+                                        {% for amenity in room.amenities %}
+                                        <span class="badge bg-secondary me-1">{{ amenity }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+
+                                    <a href="{{ url_for('booking.room_details', room_id=room.id) }}"
+                                        class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye me-1"></i>التفاصيل
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-door-closed fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">لا توجد غرف متاحة</h5>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- الحجوزات النشطة -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>
+                        الحجوزات النشطة اليوم
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if active_bookings %}
+                    {% for booking in active_bookings %}
+                    <div class="card mb-3 border-start border-primary border-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="mb-0">{{ booking.room.name }}</h6>
+                                <span class="badge bg-primary">نشط</span>
+                            </div>
+
+                            {% if booking.customer_name %}
+                            <p class="mb-1">
+                                <i class="fas fa-user me-1"></i>
+                                {{ booking.customer_name }}
+                            </p>
+                            {% endif %}
+
+                            {% if booking.customer_phone %}
+                            <p class="mb-1">
+                                <i class="fas fa-phone me-1"></i>
+                                {{ booking.customer_phone }}
+                            </p>
+                            {% endif %}
+
+                            <p class="mb-1">
+                                <i class="fas fa-clock me-1"></i>
+                                {{ booking.start_time.strftime('%H:%M') }} - {{ booking.end_time.strftime('%H:%M') }}
+                            </p>
+
+                            <p class="mb-2">
+                                <i class="fas fa-money-bill me-1"></i>
+                                {{ booking.total_cost }} ريال
+                            </p>
+
+                            <a href="{{ url_for('booking.booking_details', booking_id=booking.id) }}"
+                                class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-eye me-1"></i>التفاصيل
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">لا توجد حجوزات نشطة</h6>
+                        <p class="text-muted">جميع الغرف متاحة حالياً</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // تحديث البيانات كل دقيقة
+    setInterval(function () {
+        location.reload();
+    }, 60000);
+
+    // إضافة تأثيرات التفاعل
+    document.addEventListener('DOMContentLoaded', function () {
+        // تحديث الوقت للحجوزات النشطة
+        function updateActiveTimes() {
+            const bookingItems = document.querySelectorAll('.booking-item');
+            bookingItems.forEach(item => {
+                // يمكن إضافة منطق لتحديث الأوقات المتبقية
+            });
+        }
+
+        // تشغيل التحديث كل دقيقة
+        setInterval(updateActiveTimes, 60000);
+    });
+</script>
+{% endblock %}

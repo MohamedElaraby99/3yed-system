@@ -1,0 +1,540 @@
+﻿{% extends "base.html" %}
+
+{% block title %}إضافة منتج جديد{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-form-container {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        min-height: calc(100vh - 56px);
+        padding: 20px 0;
+    }
+
+    .form-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 20px;
+    }
+
+    .form-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .form-section {
+        margin-bottom: 25px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        border-left: 4px solid #28a745;
+    }
+
+    .section-title {
+        color: #28a745;
+        font-weight: bold;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+    }
+
+    .form-label.required::after {
+        content: " *";
+        color: #dc3545;
+        font-weight: bold;
+    }
+
+    .form-control,
+    .form-select {
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        padding: 12px 15px;
+        font-size: 14px;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+
+    .input-group-text {
+        background-color: #e9f7ef;
+        border-color: #28a745;
+        color: #28a745;
+        font-weight: 500;
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-weight: bold;
+        width: 100%;
+        font-size: 16px;
+    }
+
+    .btn-cancel {
+        background: #6c757d;
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-weight: bold;
+        width: 100%;
+        font-size: 16px;
+    }
+
+    .form-check {
+        margin-top: 10px;
+    }
+
+    .form-check-input:checked {
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+
+    .form-check-label {
+        font-weight: 500;
+        color: #495057;
+    }
+
+    .unit-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .unit-option {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        padding: 8px 15px;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 14px;
+    }
+
+    .unit-option:hover,
+    .unit-option.active {
+        background: #28a745;
+        color: white;
+        border-color: #28a745;
+    }
+
+    .price-preview {
+        background: #e7f3ff;
+        border: 1px solid #28a745;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 15px;
+    }
+
+    .price-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+
+    .profit-margin {
+        font-weight: bold;
+        color: #28a745;
+    }
+
+    .image-upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        padding: 30px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .image-upload-area:hover {
+        border-color: #28a745;
+        background-color: #f8f9fa;
+    }
+
+    .image-upload-area.drag-over {
+        border-color: #28a745;
+        background-color: #e7f3ff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="product-form-container">
+    <div class="container">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="text-center text-white">
+                    <h2>
+                        <i class="fas fa-plus-circle me-3"></i>
+                        إضافة منتج جديد
+                    </h2>
+                    <p class="mb-0">أدخل معلومات المنتج الجديد لإضافته إلى المخزون</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Form -->
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="form-card">
+                    <div class="form-header">
+                        <h4 class="text-success">
+                            <i class="fas fa-box me-2"></i>
+                            بيانات المنتج
+                        </h4>
+                    </div>
+
+                    <form method="POST" id="productForm" enctype="multipart/form-data">
+                        <!-- Basic Information Section -->
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="fas fa-info-circle me-2"></i>
+                                المعلومات الأساسية
+                            </h5>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="name_ar" class="form-label required">
+                                            <i class="fas fa-tag me-2"></i>
+                                            اسم المنتج (عربي)
+                                        </label>
+                                        <input type="text" class="form-control" id="name_ar" name="name_ar"
+                                            placeholder="أدخل اسم المنتج باللغة العربية" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="name" class="form-label">
+                                            <i class="fas fa-tag me-2"></i>
+                                            اسم المنتج (إنجليزي)
+                                        </label>
+                                        <input type="text" class="form-control" id="name" name="name"
+                                            placeholder="Product name in English">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="category_id" class="form-label required">
+                                            <i class="fas fa-folder me-2"></i>
+                                            الفئة
+                                        </label>
+                                        <select class="form-select" id="category_id" name="category_id" required>
+                                            <option value="">اختر الفئة</option>
+                                            {% for category in categories %}
+                                            <option value="{{ category.id }}">{{ category.name_ar }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="unit" class="form-label required">
+                                            <i class="fas fa-balance-scale me-2"></i>
+                                            الوحدة
+                                        </label>
+                                        <input type="text" class="form-control" id="unit" name="unit" value="قطعة"
+                                            required>
+                                        <div class="unit-options">
+                                            <span class="unit-option" data-unit="قطعة">قطعة</span>
+                                            <span class="unit-option" data-unit="كيلو">كيلو</span>
+                                            <span class="unit-option" data-unit="لتر">لتر</span>
+                                            <span class="unit-option" data-unit="متر">متر</span>
+                                            <span class="unit-option" data-unit="عبوة">عبوة</span>
+                                            <span class="unit-option" data-unit="حبة">حبة</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="description" class="form-label">
+                                    <i class="fas fa-align-left me-2"></i>
+                                    الوصف
+                                </label>
+                                <textarea class="form-control" id="description" name="description" rows="3"
+                                    placeholder="وصف تفصيلي للمنتج (اختياري)"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Pricing Section -->
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="fas fa-dollar-sign me-2"></i>
+                                الأسعار والتكلفة
+                            </h5>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="cost_price" class="form-label">
+                                            <i class="fas fa-coins me-2"></i>
+                                            سعر التكلفة
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="cost_price" name="cost_price"
+                                                step="0.01" min="0" placeholder="0.00">
+                                            <span class="input-group-text">ريال</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="price" class="form-label required">
+                                            <i class="fas fa-tag me-2"></i>
+                                            سعر البيع
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="price" name="price"
+                                                step="0.01" min="0" placeholder="0.00" required>
+                                            <span class="input-group-text">ريال</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="preparation_time" class="form-label">
+                                            <i class="fas fa-clock me-2"></i>
+                                            وقت التحضير
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="preparation_time"
+                                                name="preparation_time" min="1" value="5">
+                                            <span class="input-group-text">دقيقة</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Price Preview -->
+                            <div class="price-preview" id="pricePreview" style="display: none;">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-calculator me-2"></i>
+                                    تحليل الربحية
+                                </h6>
+                                <div class="price-row">
+                                    <span>سعر التكلفة:</span>
+                                    <span id="previewCost">0.00 ريال</span>
+                                </div>
+                                <div class="price-row">
+                                    <span>سعر البيع:</span>
+                                    <span id="previewPrice">0.00 ريال</span>
+                                </div>
+                                <div class="price-row">
+                                    <span>الربح:</span>
+                                    <span id="previewProfit">0.00 ريال</span>
+                                </div>
+                                <div class="price-row">
+                                    <span class="profit-margin">هامش الربح:</span>
+                                    <span class="profit-margin" id="previewMargin">0%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stock Section -->
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="fas fa-boxes me-2"></i>
+                                إدارة المخزون
+                            </h5>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="stock_quantity" class="form-label">
+                                            <i class="fas fa-cubes me-2"></i>
+                                            الكمية الأولية
+                                        </label>
+                                        <input type="number" class="form-control" id="stock_quantity"
+                                            name="stock_quantity" min="0" value="0">
+                                        <small class="text-muted">الكمية المتاحة عند إضافة المنتج</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="min_stock_level" class="form-label">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            الحد الأدنى للمخزون
+                                        </label>
+                                        <input type="number" class="form-control" id="min_stock_level"
+                                            name="min_stock_level" min="1" value="5">
+                                        <small class="text-muted">سيتم تنبيهك عند الوصول لهذا المستوى</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Settings Section -->
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="fas fa-cog me-2"></i>
+                                الإعدادات
+                            </h5>
+
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_available" name="is_available"
+                                    value="1" checked>
+                                <label class="form-check-label" for="is_available">
+                                    <i class="fas fa-eye me-2"></i>
+                                    متاح للبيع
+                                </label>
+                                <small class="d-block text-muted">إلغاء التحديد يجعل المنتج غير متاح للعملاء</small>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="row mt-4">
+                            <div class="col-md-6 mb-2">
+                                <a href="{{ url_for('inventory.index') }}" class="btn btn-cancel">
+                                    <i class="fas fa-times me-2"></i>
+                                    إلغاء
+                                </a>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <button type="submit" class="btn btn-submit">
+                                    <i class="fas fa-save me-2"></i>
+                                    حفظ المنتج
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function () {
+        // Unit selection
+        $('.unit-option').click(function () {
+            $('.unit-option').removeClass('active');
+            $(this).addClass('active');
+            $('#unit').val($(this).data('unit'));
+        });
+
+        // Price calculation
+        function updatePricePreview() {
+            const costPrice = parseFloat($('#cost_price').val()) || 0;
+            const sellPrice = parseFloat($('#price').val()) || 0;
+
+            if (costPrice > 0 || sellPrice > 0) {
+                const profit = sellPrice - costPrice;
+                const margin = costPrice > 0 ? ((profit / costPrice) * 100) : 0;
+
+                $('#previewCost').text(costPrice.toFixed(2) + ' ريال');
+                $('#previewPrice').text(sellPrice.toFixed(2) + ' ريال');
+                $('#previewProfit').text(profit.toFixed(2) + ' ريال');
+                $('#previewMargin').text(margin.toFixed(1) + '%');
+
+                // Color coding for profit margin
+                const marginElement = $('#previewMargin');
+                marginElement.removeClass('text-danger text-warning text-success');
+                if (margin < 10) {
+                    marginElement.addClass('text-danger');
+                } else if (margin < 30) {
+                    marginElement.addClass('text-warning');
+                } else {
+                    marginElement.addClass('text-success');
+                }
+
+                $('#pricePreview').show();
+            } else {
+                $('#pricePreview').hide();
+            }
+        }
+
+        // Price input change handlers
+        $('#cost_price, #price').on('input', updatePricePreview);
+
+        // Form validation
+        $('#productForm').on('submit', function (e) {
+            const nameAr = $('#name_ar').val().trim();
+            const price = parseFloat($('#price').val());
+            const categoryId = $('#category_id').val();
+
+            if (!nameAr) {
+                e.preventDefault();
+                alert('يرجى إدخال اسم المنتج باللغة العربية');
+                $('#name_ar').focus();
+                return false;
+            }
+
+            if (!categoryId) {
+                e.preventDefault();
+                alert('يرجى اختيار فئة المنتج');
+                $('#category_id').focus();
+                return false;
+            }
+
+            if (!price || price <= 0) {
+                e.preventDefault();
+                alert('يرجى إدخال سعر بيع صحيح');
+                $('#price').focus();
+                return false;
+            }
+
+            const costPrice = parseFloat($('#cost_price').val()) || 0;
+            if (costPrice > 0 && price <= costPrice) {
+                if (!confirm('سعر البيع أقل من أو يساوي سعر التكلفة. هل تريد المتابعة؟')) {
+                    e.preventDefault();
+                    return false;
+                }
+            }
+        });
+
+        // Auto-generate English name from Arabic (optional)
+        $('#name_ar').on('blur', function () {
+            const arabicName = $(this).val();
+            if (arabicName && !$('#name').val()) {
+                // Simple transliteration could be added here
+                // For now, just suggest the user to fill it manually
+                $('#name').attr('placeholder', 'ترجمة: ' + arabicName);
+            }
+        });
+
+        // Number input validation
+        $('input[type="number"]').on('input', function () {
+            const value = parseFloat($(this).val());
+            const min = parseFloat($(this).attr('min'));
+            const max = parseFloat($(this).attr('max'));
+
+            if (min !== undefined && value < min) {
+                $(this).val(min);
+            }
+            if (max !== undefined && value > max) {
+                $(this).val(max);
+            }
+        });
+    });
+</script>
+{% endblock %}

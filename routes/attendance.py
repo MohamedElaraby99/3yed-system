@@ -78,7 +78,8 @@ def qr_generator():
     db.session.commit()
     
     return render_template('attendance/qr_generator.html', 
-                         employee_qrs=employee_qrs)
+                         employee_qrs=employee_qrs,
+                         now=datetime.now())
 
 @attendance_bp.route('/scan')
 def scan_qr():

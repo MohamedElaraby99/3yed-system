@@ -1,0 +1,484 @@
+﻿{% extends "base.html" %}
+
+{% block title %}مسح QR للحضور والانصراف{% endblock %}
+
+{% block content %}
+<div class="container-fluid" dir="rtl">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0" style="color: #6f42c1;">
+                    <i class="fas fa-qrcode me-2"></i>
+                    مسح QR للحضور والانصراف
+                </h2>
+                <a href="{{ url_for('attendance.index') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-right me-2"></i>
+                    العودة لسجل الحضور
+                </a>
+            </div>
+
+            <!-- Scanner Card -->
+            <div class="card shadow-lg">
+                <div class="card-header" style="background: linear-gradient(135deg, #6f42c1, #9b59b6);">
+                    <h5 class="card-title text-white mb-0">
+                        <i class="fas fa-camera me-2"></i>
+                        كاميرا مسح QR
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <!-- Camera Section -->
+                    <div class="position-relative bg-dark" style="min-height: 400px;">
+                        <video id="videoElement" class="w-100" style="max-height: 400px; object-fit: cover;" autoplay
+                            playsinline muted></video>
+
+                        <!-- Scanning overlay -->
+                        <div class="position-absolute top-50 start-50 translate-middle">
+                            <div class="scanning-frame"></div>
+                        </div>
+
+                        <!-- Camera status -->
+                        <div class="position-absolute top-0 start-0 w-100 p-3">
+                            <div id="cameraStatus" class="alert alert-info text-center d-none">
+                                <i class="fas fa-camera me-2"></i>
+                                يتم تهيئة الكاميرا...
+                            </div>
+                        </div>
+
+                        <!-- No camera message -->
+                        <div id="noCameraMessage"
+                            class="position-absolute top-50 start-50 translate-middle text-center text-white d-none">
+                            <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                            <h4>لا يمكن الوصول للكاميرا</h4>
+                            <p>يرجى السماح بالوصول للكاميرا أو تجربة متصفح آخر</p>
+                            <button class="btn btn-light" onclick="initCamera()">
+                                <i class="fas fa-redo me-2"></i>
+                                إعادة المحاولة
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="p-3 bg-light">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <button id="toggleCamera" class="btn btn-primary me-3" onclick="toggleCamera()">
+                                        <i class="fas fa-pause me-2"></i>
+                                        إيقاف الكاميرا
+                                    </button>
+                                    <div id="scanStatus" class="badge bg-success">
+                                        <i class="fas fa-circle text-success me-2"></i>
+                                        جاهز للمسح
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    وجه الكاميرا نحو QR كود الموظف
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manual Input Alternative -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-keyboard me-2"></i>
+                        إدخال يدوي (بديل)
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form id="manualQrForm" class="row align-items-end">
+                        <div class="col-md-8">
+                            <label for="manualQrInput" class="form-label">رمز QR</label>
+                            <input type="text" class="form-control" id="manualQrInput" placeholder="أدخل رمز QR يدوياً"
+                                dir="ltr">
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-secondary w-100">
+                                <i class="fas fa-check me-2"></i>
+                                معالجة
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Recent Scans -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        المسح الأخير
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="recentScans" class="text-muted text-center">
+                        لا توجد عمليات مسح حديثة
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>
+                    تم بنجاح
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-user-check fa-3x text-success mb-3"></i>
+                    <h4 id="successEmployeeName"></h4>
+                    <p class="text-muted" id="successAction"></p>
+                </div>
+                <div class="alert alert-success">
+                    <strong>الوقت:</strong> <span id="successTime"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal">
+                    موافق
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    خطأ
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-times-circle fa-3x text-danger mb-3"></i>
+                    <p id="errorMessage" class="text-danger"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+                    حسناً
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include jsQR library from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+
+<script>
+    let video;
+    let canvas;
+    let canvasContext;
+    let scanning = false;
+    let stream = null;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        video = document.getElementById('videoElement');
+        canvas = document.createElement('canvas');
+        canvasContext = canvas.getContext('2d');
+
+        initCamera();
+
+        // Manual QR form handler
+        document.getElementById('manualQrForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const qrData = document.getElementById('manualQrInput').value.trim();
+            if (qrData) {
+                processQR(qrData);
+                document.getElementById('manualQrInput').value = '';
+            }
+        });
+    });
+
+    async function initCamera() {
+        try {
+            document.getElementById('cameraStatus').classList.remove('d-none');
+            document.getElementById('noCameraMessage').classList.add('d-none');
+
+            // Request camera access
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: 'environment', // Use back camera if available
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            });
+
+            video.srcObject = stream;
+            video.play();
+
+            video.addEventListener('loadedmetadata', () => {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                document.getElementById('cameraStatus').classList.add('d-none');
+                startScanning();
+            });
+
+        } catch (error) {
+            console.error('Camera access error:', error);
+            document.getElementById('cameraStatus').classList.add('d-none');
+            document.getElementById('noCameraMessage').classList.remove('d-none');
+        }
+    }
+
+    function startScanning() {
+        scanning = true;
+        document.getElementById('scanStatus').innerHTML = '<i class="fas fa-circle text-success me-2"></i>جاهز للمسح';
+        document.getElementById('scanStatus').className = 'badge bg-success';
+        scan();
+    }
+
+    function stopScanning() {
+        scanning = false;
+        document.getElementById('scanStatus').innerHTML = '<i class="fas fa-circle text-warning me-2"></i>متوقف';
+        document.getElementById('scanStatus').className = 'badge bg-warning';
+    }
+
+    function scan() {
+        if (!scanning || video.videoWidth === 0 || video.videoHeight === 0) {
+            requestAnimationFrame(scan);
+            return;
+        }
+
+        canvasContext.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = canvasContext.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+        if (code) {
+            document.getElementById('scanStatus').innerHTML = '<i class="fas fa-circle text-info me-2"></i>تم العثور على QR';
+            document.getElementById('scanStatus').className = 'badge bg-info';
+
+            // Process the QR code
+            processQR(code.data);
+
+            // Brief pause before resuming scanning
+            setTimeout(() => {
+                if (scanning) {
+                    document.getElementById('scanStatus').innerHTML = '<i class="fas fa-circle text-success me-2"></i>جاهز للمسح';
+                    document.getElementById('scanStatus').className = 'badge bg-success';
+                }
+            }, 2000);
+        }
+
+        requestAnimationFrame(scan);
+    }
+
+    function toggleCamera() {
+        const button = document.getElementById('toggleCamera');
+
+        if (scanning) {
+            stopScanning();
+            button.innerHTML = '<i class="fas fa-play me-2"></i>تشغيل الكاميرا';
+            button.className = 'btn btn-success me-3';
+        } else {
+            startScanning();
+            button.innerHTML = '<i class="fas fa-pause me-2"></i>إيقاف الكاميرا';
+            button.className = 'btn btn-primary me-3';
+        }
+    }
+
+    async function processQR(qrData) {
+        try {
+            // Show processing status
+            document.getElementById('scanStatus').innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري المعالجة...';
+            document.getElementById('scanStatus').className = 'badge bg-info';
+
+            const response = await fetch("{{ url_for('attendance.process_qr') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ qr_data: qrData })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showSuccessModal(result);
+                addToRecentScans(result, true);
+            } else {
+                showErrorModal(result.message);
+                addToRecentScans({ message: result.message }, false);
+            }
+
+        } catch (error) {
+            console.error('Processing error:', error);
+            showErrorModal('حدث خطأ في الاتصال بالخادم');
+            addToRecentScans({ message: 'خطأ في الاتصال' }, false);
+        }
+    }
+
+    function showSuccessModal(result) {
+        document.getElementById('successEmployeeName').textContent = result.employee_name;
+        document.getElementById('successAction').textContent = result.action;
+        document.getElementById('successTime').textContent = result.time;
+
+        const modal = new bootstrap.Modal(document.getElementById('successModal'));
+        modal.show();
+    }
+
+    function showErrorModal(message) {
+        document.getElementById('errorMessage').textContent = message;
+
+        const modal = new bootstrap.Modal(document.getElementById('errorModal'));
+        modal.show();
+    }
+
+    function addToRecentScans(result, success) {
+        const recentScans = document.getElementById('recentScans');
+        const timestamp = new Date().toLocaleTimeString('ar-SA');
+
+        const scanItem = document.createElement('div');
+        scanItem.className = `alert ${success ? 'alert-success' : 'alert-danger'} mb-2`;
+
+        if (success) {
+            scanItem.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>${result.employee_name}</strong> - ${result.action}
+                </div>
+                <small>${timestamp}</small>
+            </div>
+        `;
+        } else {
+            scanItem.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>خطأ: ${result.message}</div>
+                <small>${timestamp}</small>
+            </div>
+        `;
+        }
+
+        // Replace "no recent scans" message if it exists
+        if (recentScans.textContent.trim() === 'لا توجد عمليات مسح حديثة') {
+            recentScans.innerHTML = '';
+        }
+
+        recentScans.insertBefore(scanItem, recentScans.firstChild);
+
+        // Keep only last 5 scans
+        while (recentScans.children.length > 5) {
+            recentScans.removeChild(recentScans.lastChild);
+        }
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function () {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+    });
+</script>
+
+<style>
+    .scanning-frame {
+        width: 250px;
+        height: 250px;
+        border: 3px solid #6f42c1;
+        border-radius: 15px;
+        position: relative;
+        background: rgba(111, 66, 193, 0.1);
+    }
+
+    .scanning-frame::before,
+    .scanning-frame::after {
+        content: '';
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        border: 3px solid #fff;
+    }
+
+    .scanning-frame::before {
+        top: -3px;
+        left: -3px;
+        border-right: none;
+        border-bottom: none;
+        border-radius: 15px 0 0 0;
+    }
+
+    .scanning-frame::after {
+        bottom: -3px;
+        right: -3px;
+        border-left: none;
+        border-top: none;
+        border-radius: 0 0 15px 0;
+    }
+
+    /* Additional corner decorations */
+    .scanning-frame {
+        box-shadow:
+            inset 30px 0 0 -27px #fff,
+            inset 0 30px 0 -27px #fff,
+            inset -30px 0 0 -27px #fff,
+            inset 0 -30px 0 -27px #fff;
+    }
+
+    .card {
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+
+    .card-header {
+        border-bottom: 3px solid #6f42c1;
+    }
+
+    .alert {
+        border-radius: 10px;
+        border: none;
+    }
+
+    @media (max-width: 768px) {
+        .scanning-frame {
+            width: 200px;
+            height: 200px;
+        }
+
+        #videoElement {
+            max-height: 300px;
+        }
+    }
+
+    /* Animation for scanning effect */
+    @keyframes scan-line {
+        0% {
+            top: 0;
+        }
+
+        100% {
+            top: 100%;
+        }
+    }
+
+    .scanning-frame::before {
+        animation: scan-line 2s linear infinite;
+        background: linear-gradient(to bottom, transparent, #6f42c1, transparent);
+        height: 2px;
+        width: 100%;
+        top: 0;
+        left: 0;
+        border: none;
+        border-radius: 0;
+    }
+</style>
+{% endblock %}

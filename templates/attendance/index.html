@@ -1,0 +1,468 @@
+﻿{% extends "base.html" %}
+
+{% block title %}إدارة الحضور والانصراف{% endblock %}
+
+{% block content %}
+<div class="container-fluid" dir="rtl">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0" style="color: #6f42c1;">
+                    <i class="fas fa-user-clock me-2"></i>
+                    إدارة الحضور والانصراف
+                </h2>
+                <div class="btn-group">
+                    <a href="{{ url_for('attendance.scan_qr') }}" class="btn btn-primary">
+                        <i class="fas fa-qrcode me-2"></i>
+                        مسح QR
+                    </a>
+                    <a href="{{ url_for('attendance.qr_generator') }}" class="btn btn-info">
+                        <i class="fas fa-qr-generator me-2"></i>
+                        توليد QR
+                    </a>
+                    <a href="{{ url_for('attendance.manual_entry') }}" class="btn btn-success">
+                        <i class="fas fa-pen me-2"></i>
+                        تسجيل يدوي
+                    </a>
+                    <a href="{{ url_for('attendance.reports') }}" class="btn btn-warning">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        التقارير
+                    </a>
+                </div>
+            </div>
+
+            <!-- Date Filter Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header" style="background: linear-gradient(135deg, #6f42c1, #9b59b6);">
+                    <h5 class="card-title text-white mb-0">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        فلترة التاريخ
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" class="row align-items-center">
+                        <div class="col-md-4">
+                            <label for="date" class="form-label fw-bold">التاريخ</label>
+                            <input type="date" class="form-control" id="date" name="date"
+                                value="{{ filter_date.strftime('%Y-%m-%d') }}" onchange="this.form.submit()">
+                        </div>
+                        <div class="col-md-8">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm w-100"
+                                        onclick="setDateOffset(0)">
+                                        اليوم
+                                    </button>
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm w-100"
+                                        onclick="setDateOffset(-1)">
+                                        أمس
+                                    </button>
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm w-100"
+                                        onclick="setDateOffset(-7)">
+                                        قبل أسبوع
+                                    </button>
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                                        <i class="fas fa-search me-1"></i>
+                                        تحديث
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Attendance Statistics -->
+            <div class="row mb-4">
+                {% set present_count = employee_attendance | selectattr('attendance.status', 'equalto', 'present') |
+                list | length %}
+                {% set absent_count = employee_attendance | selectattr('attendance.status', 'equalto', 'absent') | list
+                | length %}
+                {% set late_count = employee_attendance | selectattr('attendance.status', 'equalto', 'late') | list |
+                length %}
+                {% set total_count = employee_attendance | length %}
+
+                <div class="col-md-3">
+                    <div class="card text-white" style="background: linear-gradient(135deg, #28a745, #20c997);">
+                        <div class="card-body text-center">
+                            <i class="fas fa-user-check fa-2x mb-2"></i>
+                            <h4 class="card-title">{{ present_count }}</h4>
+                            <p class="card-text">حاضر</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white" style="background: linear-gradient(135deg, #dc3545, #e74c3c);">
+                        <div class="card-body text-center">
+                            <i class="fas fa-user-times fa-2x mb-2"></i>
+                            <h4 class="card-title">{{ absent_count }}</h4>
+                            <p class="card-text">غائب</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white" style="background: linear-gradient(135deg, #ffc107, #f39c12);">
+                        <div class="card-body text-center">
+                            <i class="fas fa-user-clock fa-2x mb-2"></i>
+                            <h4 class="card-title">{{ late_count }}</h4>
+                            <p class="card-text">متأخر</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white" style="background: linear-gradient(135deg, #6f42c1, #9b59b6);">
+                        <div class="card-body text-center">
+                            <i class="fas fa-users fa-2x mb-2"></i>
+                            <h4 class="card-title">{{ total_count }}</h4>
+                            <p class="card-text">إجمالي الموظفين</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Table -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-list me-2"></i>
+                            سجلات الحضور - {{ filter_date.strftime('%A, %d %B %Y') }}
+                        </h5>
+                        <div class="input-group" style="max-width: 300px;">
+                            <input type="text" class="form-control" id="searchInput" placeholder="البحث في الموظفين...">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="attendanceTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>الموظف</th>
+                                    <th>الدور</th>
+                                    <th>وقت الدخول</th>
+                                    <th>وقت الخروج</th>
+                                    <th>ساعات العمل</th>
+                                    <th>الحالة</th>
+                                    <th>ملاحظات</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in employee_attendance %}
+                                <tr class="employee-row"
+                                    data-employee-name="{{ item.employee.first_name }} {{ item.employee.last_name }}">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm me-3">
+                                                <div class="avatar-title rounded-circle"
+                                                    style="background: linear-gradient(135deg, #6f42c1, #9b59b6); color: white;">
+                                                    {{ item.employee.first_name[0] }}{{ item.employee.last_name[0] }}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0">{{ item.employee.first_name }} {{
+                                                    item.employee.last_name }}</h6>
+                                                <small class="text-muted">{{ item.employee.employee_id or 'لا يوجد'
+                                                    }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ item.employee.user_role.name_ar }}</span>
+                                    </td>
+                                    <td>
+                                        {% if item.attendance.check_in %}
+                                        <span class="text-success">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ item.attendance.check_in.strftime('%H:%M') }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.attendance.check_out %}
+                                        <span class="text-danger">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ item.attendance.check_out.strftime('%H:%M') }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.attendance.total_hours %}
+                                        <span class="badge bg-info">
+                                            {{ "%.1f"|format(item.attendance.total_hours) }} ساعة
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.attendance.status == 'present' %}
+                                        <span class="badge bg-success">حاضر</span>
+                                        {% elif item.attendance.status == 'absent' %}
+                                        <span class="badge bg-danger">غائب</span>
+                                        {% elif item.attendance.status == 'late' %}
+                                        <span class="badge bg-warning">متأخر</span>
+                                        {% elif item.attendance.status == 'early_leave' %}
+                                        <span class="badge bg-info">انصراف مبكر</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ item.attendance.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.attendance.notes %}
+                                        <span class="text-truncate" style="max-width: 150px;"
+                                            title="{{ item.attendance.notes }}">
+                                            {{ item.attendance.notes }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-success btn-sm"
+                                                onclick="markPresent({{ item.employee.id }})" title="تحديد كحاضر">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger btn-sm"
+                                                onclick="markAbsent({{ item.employee.id }})" title="تحديد كغائب">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <a href="{{ url_for('attendance.manual_entry') }}?employee_id={{ item.employee.id }}&date={{ filter_date.strftime('%Y-%m-%d') }}"
+                                                class="btn btn-outline-primary btn-sm" title="تعديل">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Status Update Modal -->
+<div class="modal fade" id="statusUpdateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تحديث حالة الحضور</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="statusUpdateForm">
+                    <input type="hidden" id="employeeId" name="employee_id">
+                    <input type="hidden" id="attendanceDate" name="date" value="{{ filter_date.strftime('%Y-%m-%d') }}">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">الموظف</label>
+                        <p id="employeeName" class="form-control-plaintext"></p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">الحالة</label>
+                        <select class="form-select" id="attendanceStatus" name="status" required>
+                            <option value="present">حاضر</option>
+                            <option value="absent">غائب</option>
+                            <option value="late">متأخر</option>
+                            <option value="early_leave">انصراف مبكر</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">ملاحظات</label>
+                        <textarea class="form-control" id="attendanceNotes" name="notes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" onclick="saveStatusUpdate()">حفظ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Date helper functions
+    function setDateOffset(days) {
+        const date = new Date();
+        date.setDate(date.getDate() + days);
+        document.getElementById('date').value = date.toISOString().split('T')[0];
+        document.querySelector('form').submit();
+    }
+
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('input', function () {
+        const searchTerm = this.value.toLowerCase();
+        const rows = document.querySelectorAll('.employee-row');
+
+        rows.forEach(row => {
+            const employeeName = row.getAttribute('data-employee-name').toLowerCase();
+            if (employeeName.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+
+    // Quick status update functions
+    function markPresent(employeeId) {
+        updateEmployeeStatus(employeeId, 'present', 'تم تحديد الموظف كحاضر');
+    }
+
+    function markAbsent(employeeId) {
+        updateEmployeeStatus(employeeId, 'absent', 'تم تحديد الموظف كغائب');
+    }
+
+    function updateEmployeeStatus(employeeId, status, message) {
+        // Find employee name
+        const row = document.querySelector(`tr .btn-group [onclick*="${employeeId}"]`).closest('tr');
+        const employeeName = row.getAttribute('data-employee-name');
+
+        // Set modal data
+        document.getElementById('employeeId').value = employeeId;
+        document.getElementById('employeeName').textContent = employeeName;
+        document.getElementById('attendanceStatus').value = status;
+
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('statusUpdateModal'));
+        modal.show();
+    }
+
+    function saveStatusUpdate() {
+        const form = document.getElementById('statusUpdateForm');
+        const formData = new FormData(form);
+
+        // Convert to URLSearchParams for easy sending
+        const data = new URLSearchParams();
+        for (let [key, value] of formData.entries()) {
+            data.append(key, value);
+        }
+
+        // Add current time for check-in if status is present
+        const status = document.getElementById('attendanceStatus').value;
+        if (status === 'present') {
+            const now = new Date();
+            data.append('check_in', now.toTimeString().slice(0, 5));
+        }
+
+        fetch("{{ url_for('attendance.manual_entry') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: data
+        })
+            .then(response => response.text())
+            .then(result => {
+                // Close modal and reload page
+                const modal = bootstrap.Modal.getInstance(document.getElementById('statusUpdateModal'));
+                modal.hide();
+                window.location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('حدث خطأ في تحديث الحالة');
+            });
+    }
+
+    // Auto-refresh page every 5 minutes
+    setInterval(function () {
+        window.location.reload();
+    }, 300000);
+</script>
+
+<style>
+    .avatar-sm {
+        width: 40px;
+        height: 40px;
+    }
+
+    .avatar-title {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+
+    .table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .table td {
+        vertical-align: middle;
+        padding: 1rem 0.75rem;
+    }
+
+    .card {
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+
+    .card-header {
+        border-bottom: 3px solid #6f42c1;
+    }
+
+    .btn-group .btn {
+        border-radius: 6px !important;
+        margin: 0 1px;
+    }
+
+    .badge {
+        font-size: 0.75em;
+        padding: 0.5em 0.75em;
+    }
+
+    @media (max-width: 768px) {
+        .btn-group {
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .btn-group .btn {
+            width: 100%;
+        }
+
+        .table-responsive {
+            font-size: 0.9em;
+        }
+    }
+
+    .employee-row:hover {
+        background-color: #f8f9fa;
+    }
+
+    .text-truncate {
+        display: inline-block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+</style>
+{% endblock %}

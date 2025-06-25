@@ -1,0 +1,544 @@
+﻿{% extends "base.html" %}
+
+{% block title %}توليد QR للموظفين{% endblock %}
+
+{% block content %}
+<div class="container-fluid" dir="rtl">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0" style="color: #6f42c1;">
+                    <i class="fas fa-qrcode me-2"></i>
+                    توليد QR للموظفين
+                </h2>
+                <div class="btn-group">
+                    <a href="{{ url_for('attendance.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-right me-2"></i>
+                        العودة للحضور
+                    </a>
+                    <button class="btn btn-primary" onclick="printAllQRs()">
+                        <i class="fas fa-print me-2"></i>
+                        طباعة الكل
+                    </button>
+                    <button class="btn btn-success" onclick="downloadAllQRs()">
+                        <i class="fas fa-download me-2"></i>
+                        تحميل الكل
+                    </button>
+                </div>
+            </div>
+
+            <!-- Instructions Card -->
+            <div class="card mb-4 border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        تعليمات الاستخدام
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success me-2"></i>كل موظف له QR كود خاص به</li>
+                                <li><i class="fas fa-check text-success me-2"></i>صالح لمدة 24 ساعة من وقت التوليد</li>
+                                <li><i class="fas fa-check text-success me-2"></i>يمكن طباعة أو تحميل QR للموظفين</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success me-2"></i>استخدم كاميرا الهاتف أو الجهاز للمسح
+                                </li>
+                                <li><i class="fas fa-check text-success me-2"></i>الكود يسجل الدخول والخروج تلقائياً
+                                </li>
+                                <li><i class="fas fa-check text-success me-2"></i>آمن ومشفر لكل موظف</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card text-white" style="background: linear-gradient(135deg, #6f42c1, #9b59b6);">
+                        <div class="card-body text-center">
+                            <i class="fas fa-users fa-2x mb-2"></i>
+                            <h4 class="card-title">{{ employee_qrs|length }}</h4>
+                            <p class="card-text">إجمالي الموظفين</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white" style="background: linear-gradient(135deg, #28a745, #20c997);">
+                        <div class="card-body text-center">
+                            <i class="fas fa-qrcode fa-2x mb-2"></i>
+                            <h4 class="card-title">{{ employee_qrs|length }}</h4>
+                            <p class="card-text">QR تم توليدها</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white" style="background: linear-gradient(135deg, #17a2b8, #138496);">
+                        <div class="card-body text-center">
+                            <i class="fas fa-clock fa-2x mb-2"></i>
+                            <h4 class="card-title">24</h4>
+                            <p class="card-text">ساعة صالحية</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white" style="background: linear-gradient(135deg, #ffc107, #f39c12);">
+                        <div class="card-body text-center">
+                            <i class="fas fa-shield-alt fa-2x mb-2"></i>
+                            <h4 class="card-title">100%</h4>
+                            <p class="card-text">آمن ومشفر</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="searchInput"
+                                    placeholder="البحث في الموظفين...">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <div class="btn-group">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="selectAll()">
+                                    <i class="fas fa-check-square me-1"></i>
+                                    تحديد الكل
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="deselectAll()">
+                                    <i class="fas fa-square me-1"></i>
+                                    إلغاء التحديد
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" onclick="printSelected()">
+                                    <i class="fas fa-print me-1"></i>
+                                    طباعة المحدد
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QR Codes Grid -->
+            <div class="row" id="qrGrid">
+                {% for item in employee_qrs %}
+                <div class="col-xl-3 col-lg-4 col-md-6 col-12 mb-4 employee-card"
+                    data-employee-name="{{ item.employee.first_name }} {{ item.employee.last_name }}">
+                    <div class="card h-100 qr-card">
+                        <div class="card-header text-center"
+                            style="background: linear-gradient(135deg, #6f42c1, #9b59b6);">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input class="form-check-input qr-checkbox" type="checkbox"
+                                        id="qr_{{ item.employee.id }}" value="{{ item.employee.id }}">
+                                </div>
+                                <h6 class="card-title text-white mb-0 flex-grow-1">
+                                    {{ item.employee.first_name }} {{ item.employee.last_name }}
+                                </h6>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-light" type="button"
+                                        data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" href="#"
+                                                onclick="downloadSingleQR('{{ item.employee.id }}', '{{ item.employee.first_name }}_{{ item.employee.last_name }}')">
+                                                <i class="fas fa-download me-2"></i>تحميل
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="#"
+                                                onclick="printSingleQR('{{ item.employee.id }}')">
+                                                <i class="fas fa-print me-2"></i>طباعة
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <hr class="dropdown-divider">
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="#"
+                                                onclick="regenerateQR('{{ item.employee.id }}')">
+                                                <i class="fas fa-sync me-2"></i>توليد جديد
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body text-center p-3">
+                            <!-- QR Code Display -->
+                            <div class="qr-container mb-3" id="qr_container_{{ item.employee.id }}">
+                                <img src="data:image/png;base64,{{ item.qr_code }}" class="qr-image"
+                                    alt="QR Code for {{ item.employee.first_name }} {{ item.employee.last_name }}"
+                                    id="qr_img_{{ item.employee.id }}">
+                            </div>
+
+                            <!-- Employee Info -->
+                            <div class="employee-info">
+                                <h6 class="mb-1">{{ item.employee.first_name }} {{ item.employee.last_name }}</h6>
+                                <small class="text-muted d-block">{{ item.employee.user_role.name_ar }}</small>
+                                <small class="text-muted d-block">معرف: {{ item.employee.employee_id or 'غير محدد'
+                                    }}</small>
+                            </div>
+
+                            <!-- Expiry Info -->
+                            <div class="mt-3">
+                                <div class="alert alert-info py-2 mb-2">
+                                    <small>
+                                        <i class="fas fa-clock me-1"></i>
+                                        صالح حتى: {{ item.expiry.strftime('%Y-%m-%d %H:%M') }}
+                                    </small>
+                                </div>
+                                {% set time_left = (item.expiry - now).total_seconds() / 3600 %}
+                                {% if time_left > 12 %}
+                                <span class="badge bg-success">صالح</span>
+                                {% elif time_left > 6 %}
+                                <span class="badge bg-warning">ينتهي قريباً</span>
+                                {% else %}
+                                <span class="badge bg-danger">منتهي الصلاحية</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-footer text-center bg-light">
+                            <small class="text-muted">
+                                تم التوليد: {{ item.expiry.strftime('%Y-%m-%d %H:%M') }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- No Results Message -->
+            <div id="noResults" class="text-center py-5 d-none">
+                <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">لا توجد نتائج</h4>
+                <p class="text-muted">لم يتم العثور على موظفين يطابقون البحث</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Print Modal -->
+<div class="modal fade" id="printModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">معاينة الطباعة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="printContent" class="print-content"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-primary" onclick="executePrint()">
+                    <i class="fas fa-print me-2"></i>طباعة
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('input', function () {
+        const searchTerm = this.value.toLowerCase();
+        const cards = document.querySelectorAll('.employee-card');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const employeeName = card.getAttribute('data-employee-name').toLowerCase();
+            if (employeeName.includes(searchTerm)) {
+                card.style.display = '';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Show/hide no results message
+        const noResults = document.getElementById('noResults');
+        if (visibleCount === 0 && searchTerm.length > 0) {
+            noResults.classList.remove('d-none');
+        } else {
+            noResults.classList.add('d-none');
+        }
+    });
+
+    // Selection functions
+    function selectAll() {
+        const checkboxes = document.querySelectorAll('.qr-checkbox');
+        checkboxes.forEach(checkbox => {
+            const card = checkbox.closest('.employee-card');
+            if (card.style.display !== 'none') {
+                checkbox.checked = true;
+            }
+        });
+    }
+
+    function deselectAll() {
+        const checkboxes = document.querySelectorAll('.qr-checkbox');
+        checkboxes.forEach(checkbox => checkbox.checked = false);
+    }
+
+    // Download functions
+    function downloadSingleQR(employeeId, employeeName) {
+        const qrImg = document.getElementById(`qr_img_${employeeId}`);
+        const link = document.createElement('a');
+        link.download = `QR_${employeeName}.png`;
+        link.href = qrImg.src;
+        link.click();
+    }
+
+    function downloadAllQRs() {
+        const cards = document.querySelectorAll('.employee-card');
+        cards.forEach((card, index) => {
+            if (card.style.display !== 'none') {
+                setTimeout(() => {
+                    const employeeId = card.querySelector('.qr-checkbox').value;
+                    const employeeName = card.getAttribute('data-employee-name').replace(' ', '_');
+                    downloadSingleQR(employeeId, employeeName);
+                }, index * 100); // Delay to prevent browser blocking
+            }
+        });
+    }
+
+    // Print functions
+    function printSingleQR(employeeId) {
+        const card = document.querySelector(`#qr_${employeeId}`).closest('.qr-card');
+        const content = createPrintContent([card]);
+        showPrintModal(content);
+    }
+
+    function printSelected() {
+        const selectedCards = [];
+        const checkboxes = document.querySelectorAll('.qr-checkbox:checked');
+
+        if (checkboxes.length === 0) {
+            alert('يرجى تحديد موظف واحد على الأقل');
+            return;
+        }
+
+        checkboxes.forEach(checkbox => {
+            const card = checkbox.closest('.qr-card');
+            selectedCards.push(card);
+        });
+
+        const content = createPrintContent(selectedCards);
+        showPrintModal(content);
+    }
+
+    function printAllQRs() {
+        const visibleCards = [];
+        const cards = document.querySelectorAll('.employee-card');
+
+        cards.forEach(card => {
+            if (card.style.display !== 'none') {
+                visibleCards.push(card.querySelector('.qr-card'));
+            }
+        });
+
+        const content = createPrintContent(visibleCards);
+        showPrintModal(content);
+    }
+
+    function createPrintContent(cards) {
+        let content = '<div class="print-grid">';
+
+        cards.forEach(card => {
+            const employeeName = card.querySelector('h6').textContent;
+            const role = card.querySelector('.text-muted').textContent;
+            const qrImg = card.querySelector('.qr-image');
+            const expiry = card.querySelector('.alert small').textContent;
+
+            content += `
+            <div class="print-qr-item">
+                <div class="print-header">
+                    <h5>${employeeName}</h5>
+                    <small>${role}</small>
+                </div>
+                <div class="print-qr">
+                    <img src="${qrImg.src}" alt="QR Code">
+                </div>
+                <div class="print-footer">
+                    <small>${expiry}</small>
+                    <div class="company-info">
+                        <strong>Cafe System</strong>
+                    </div>
+                </div>
+            </div>
+        `;
+        });
+
+        content += '</div>';
+        return content;
+    }
+
+    function showPrintModal(content) {
+        document.getElementById('printContent').innerHTML = content;
+        const modal = new bootstrap.Modal(document.getElementById('printModal'));
+        modal.show();
+    }
+
+    function executePrint() {
+        const printContent = document.getElementById('printContent').innerHTML;
+        const printWindow = window.open('', '_blank');
+
+        printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>طباعة QR الموظفين</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+                .print-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+                .print-qr-item { border: 2px solid #6f42c1; border-radius: 10px; padding: 15px; text-align: center; page-break-inside: avoid; }
+                .print-header h5 { margin: 0 0 5px 0; color: #6f42c1; }
+                .print-qr img { width: 150px; height: 150px; margin: 10px 0; }
+                .print-footer { margin-top: 10px; font-size: 12px; color: #666; }
+                .company-info { margin-top: 5px; color: #6f42c1; }
+                @media print {
+                    body { margin: 0; }
+                    .print-grid { grid-template-columns: repeat(2, 1fr); }
+                }
+            </style>
+        </head>
+        <body>
+            ${printContent}
+        </body>
+        </html>
+    `);
+
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('printModal'));
+        modal.hide();
+    }
+
+    // Regenerate QR function
+    async function regenerateQR(employeeId) {
+        if (!confirm('هل تريد توليد QR جديد لهذا الموظف؟')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`{{ url_for('attendance.qr_generator') }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ employee_id: employeeId })
+            });
+
+            if (response.ok) {
+                location.reload(); // Refresh page to show new QR
+            } else {
+                alert('حدث خطأ في توليد QR جديد');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('حدث خطأ في الاتصال بالخادم');
+        }
+    }
+</script>
+
+<style>
+    .qr-card {
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .qr-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .qr-image {
+        width: 150px;
+        height: 150px;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        background: white;
+    }
+
+    .qr-container {
+        background: white;
+        padding: 10px;
+        border-radius: 10px;
+        display: inline-block;
+    }
+
+    .employee-info h6 {
+        color: #6f42c1;
+        font-weight: 600;
+    }
+
+    .card-header {
+        border-bottom: 3px solid #6f42c1;
+    }
+
+    .form-check-input:checked {
+        background-color: #6f42c1;
+        border-color: #6f42c1;
+    }
+
+    .print-content {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .print-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+    }
+
+    .print-qr-item {
+        border: 2px solid #6f42c1;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+    }
+
+    .print-qr img {
+        width: 100px;
+        height: 100px;
+    }
+
+    @media (max-width: 768px) {
+        .qr-image {
+            width: 120px;
+            height: 120px;
+        }
+
+        .btn-group {
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .btn-group .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,557 @@
+﻿{% extends "base.html" %}
+
+{% block title %}تعديل المخزون{% endblock %}
+
+{% block extra_css %}
+<style>
+    .adjustment-container {
+        background: linear-gradient(135deg, #17a2b8 0%, #007bff 100%);
+        min-height: calc(100vh - 56px);
+        padding: 20px 0;
+    }
+
+    .form-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 20px;
+    }
+
+    .form-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .product-info-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 4px solid #17a2b8;
+    }
+
+    .adjustment-type-section {
+        margin-bottom: 25px;
+        padding: 20px;
+        background: #e7f3ff;
+        border-radius: 10px;
+        border-left: 4px solid #007bff;
+    }
+
+    .adjustment-option {
+        background: white;
+        border: 2px solid #dee2e6;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .adjustment-option:hover {
+        border-color: #007bff;
+        box-shadow: 0 4px 15px rgba(0, 123, 255, 0.15);
+    }
+
+    .adjustment-option.selected {
+        border-color: #007bff;
+        background-color: #e7f3ff;
+    }
+
+    .adjustment-option input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+    }
+
+    .adjustment-icon {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        display: block;
+    }
+
+    .add-adjustment .adjustment-icon {
+        color: #28a745;
+    }
+
+    .subtract-adjustment .adjustment-icon {
+        color: #dc3545;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+    }
+
+    .form-label.required::after {
+        content: " *";
+        color: #dc3545;
+        font-weight: bold;
+    }
+
+    .form-control,
+    .form-select {
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        padding: 12px 15px;
+        font-size: 14px;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #17a2b8;
+        box-shadow: 0 0 0 0.2rem rgba(23, 162, 184, 0.25);
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, #17a2b8 0%, #007bff 100%);
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-weight: bold;
+        width: 100%;
+        font-size: 16px;
+    }
+
+    .btn-cancel {
+        background: #6c757d;
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-weight: bold;
+        width: 100%;
+        font-size: 16px;
+    }
+
+    .stock-info {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 15px;
+    }
+
+    .stock-warning {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 15px;
+        display: none;
+    }
+
+    .quick-quantities {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .quantity-btn {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 8px 15px;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 14px;
+    }
+
+    .quantity-btn:hover,
+    .quantity-btn.active {
+        background: #17a2b8;
+        color: white;
+        border-color: #17a2b8;
+    }
+
+    .adjustment-preview {
+        background: #e7f3ff;
+        border: 1px solid #17a2b8;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 15px;
+        display: none;
+    }
+
+    .preview-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+
+    .new-stock-high {
+        color: #28a745;
+        font-weight: bold;
+    }
+
+    .new-stock-low {
+        color: #ffc107;
+        font-weight: bold;
+    }
+
+    .new-stock-out {
+        color: #dc3545;
+        font-weight: bold;
+    }
+
+    .recent-adjustments {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .adjustment-history-item {
+        border-bottom: 1px solid #f0f0f0;
+        padding: 10px 0;
+    }
+
+    .adjustment-history-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="adjustment-container">
+    <div class="container">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="text-center text-white">
+                    <h2>
+                        <i class="fas fa-edit me-3"></i>
+                        تعديل المخزون
+                    </h2>
+                    <p class="mb-0">إضافة أو خصم كميات من المخزون مع تسجيل السبب</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Adjustment Form -->
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="form-card">
+                    <div class="form-header">
+                        <h4 class="text-info">
+                            <i class="fas fa-box me-2"></i>
+                            تعديل كمية المنتج
+                        </h4>
+                    </div>
+
+                    <form method="POST" id="adjustmentForm">
+                        <!-- Product Selection -->
+                        <div class="form-group">
+                            <label for="product_id" class="form-label required">
+                                <i class="fas fa-cube me-2"></i>
+                                اختر المنتج
+                            </label>
+                            <select class="form-select" id="product_id" name="product_id" required>
+                                <option value="">اختر المنتج المراد تعديل مخزونه</option>
+                                {% for product in products %}
+                                <option value="{{ product.id }}" data-stock="{{ product.stock_quantity }}"
+                                    data-unit="{{ product.unit }}" data-min-stock="{{ product.min_stock_level }}">
+                                    {{ product.name_ar }} - المخزون الحالي: {{ product.stock_quantity }} {{ product.unit
+                                    }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Product Info Card -->
+                        <div class="product-info-card" id="productInfoCard" style="display: none;">
+                            <h6 class="mb-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                معلومات المنتج المحدد
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <small class="text-muted">المخزون الحالي</small>
+                                    <div class="fw-bold" id="currentStock">-</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">الحد الأدنى</small>
+                                    <div id="minStock">-</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">الوحدة</small>
+                                    <div id="productUnit">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Adjustment Type -->
+                        <div class="adjustment-type-section">
+                            <h6 class="mb-3">
+                                <i class="fas fa-exchange-alt me-2"></i>
+                                نوع التعديل
+                            </h6>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="adjustment-option add-adjustment" data-type="add">
+                                        <input type="radio" name="adjustment_type" value="add" id="add_type">
+                                        <label for="add_type" class="w-100">
+                                            <i class="fas fa-plus-circle adjustment-icon"></i>
+                                            <h6 class="mb-1">إضافة للمخزون</h6>
+                                            <small class="text-muted">زيادة الكمية المتاحة</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="adjustment-option subtract-adjustment" data-type="subtract">
+                                        <input type="radio" name="adjustment_type" value="subtract" id="subtract_type">
+                                        <label for="subtract_type" class="w-100">
+                                            <i class="fas fa-minus-circle adjustment-icon"></i>
+                                            <h6 class="mb-1">خصم من المخزون</h6>
+                                            <small class="text-muted">تقليل الكمية المتاحة</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quantity -->
+                        <div class="form-group">
+                            <label for="quantity" class="form-label required">
+                                <i class="fas fa-hashtag me-2"></i>
+                                الكمية
+                            </label>
+                            <input type="number" class="form-control" id="quantity" name="quantity" min="1"
+                                placeholder="أدخل الكمية" required>
+
+                            <!-- Quick Quantity Selection -->
+                            <div class="quick-quantities">
+                                <span class="quantity-btn" data-qty="1">1</span>
+                                <span class="quantity-btn" data-qty="5">5</span>
+                                <span class="quantity-btn" data-qty="10">10</span>
+                                <span class="quantity-btn" data-qty="25">25</span>
+                                <span class="quantity-btn" data-qty="50">50</span>
+                                <span class="quantity-btn" data-qty="100">100</span>
+                            </div>
+                        </div>
+
+                        <!-- Warning for subtract -->
+                        <div class="stock-warning" id="stockWarning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>تحذير:</strong> الكمية المطلوب خصمها أكبر من المخزون المتاح!
+                        </div>
+
+                        <!-- Adjustment Preview -->
+                        <div class="adjustment-preview" id="adjustmentPreview">
+                            <h6 class="mb-3">
+                                <i class="fas fa-eye me-2"></i>
+                                معاينة التعديل
+                            </h6>
+                            <div class="preview-row">
+                                <span>المخزون الحالي:</span>
+                                <span id="previewCurrentStock">-</span>
+                            </div>
+                            <div class="preview-row">
+                                <span>الكمية المعدلة:</span>
+                                <span id="previewAdjustment">-</span>
+                            </div>
+                            <div class="preview-row">
+                                <strong>المخزون الجديد:</strong>
+                                <strong id="previewNewStock">-</strong>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="form-group">
+                            <label for="notes" class="form-label">
+                                <i class="fas fa-sticky-note me-2"></i>
+                                ملاحظات
+                            </label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"
+                                placeholder="سبب التعديل أو ملاحظات إضافية"></textarea>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="row mt-4">
+                            <div class="col-md-6 mb-2">
+                                <a href="{{ url_for('inventory.index') }}" class="btn btn-cancel">
+                                    <i class="fas fa-times me-2"></i>
+                                    إلغاء
+                                </a>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <button type="submit" class="btn btn-submit">
+                                    <i class="fas fa-save me-2"></i>
+                                    تطبيق التعديل
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function () {
+        let currentStock = 0;
+        let minStock = 0;
+        let productUnit = '';
+
+        // Product selection change
+        $('#product_id').change(function () {
+            const selectedOption = $(this).find('option:selected');
+
+            if ($(this).val()) {
+                currentStock = parseInt(selectedOption.data('stock'));
+                minStock = parseInt(selectedOption.data('min-stock'));
+                productUnit = selectedOption.data('unit');
+
+                $('#currentStock').text(currentStock + ' ' + productUnit);
+                $('#minStock').text(minStock + ' ' + productUnit);
+                $('#productUnit').text(productUnit);
+                $('#productInfoCard').show();
+
+                updatePreview();
+            } else {
+                $('#productInfoCard').hide();
+                $('#adjustmentPreview').hide();
+                $('#stockWarning').hide();
+            }
+        });
+
+        // Adjustment type selection
+        $('.adjustment-option').click(function () {
+            $('.adjustment-option').removeClass('selected');
+            $(this).addClass('selected');
+            $(this).find('input[type="radio"]').prop('checked', true);
+            updatePreview();
+        });
+
+        // Quick quantity selection
+        $('.quantity-btn').click(function () {
+            $('.quantity-btn').removeClass('active');
+            $(this).addClass('active');
+            $('#quantity').val($(this).data('qty'));
+            updatePreview();
+        });
+
+        // Quantity input change
+        $('#quantity').on('input', function () {
+            $('.quantity-btn').removeClass('active');
+            updatePreview();
+        });
+
+        function updatePreview() {
+            const adjustmentType = $('input[name="adjustment_type"]:checked').val();
+            const quantity = parseInt($('#quantity').val()) || 0;
+
+            if (!$('#product_id').val() || !adjustmentType || quantity <= 0) {
+                $('#adjustmentPreview').hide();
+                $('#stockWarning').hide();
+                return;
+            }
+
+            let newStock;
+            let adjustmentText;
+
+            if (adjustmentType === 'add') {
+                newStock = currentStock + quantity;
+                adjustmentText = '+' + quantity + ' ' + productUnit;
+                $('#stockWarning').hide();
+            } else {
+                newStock = currentStock - quantity;
+                adjustmentText = '-' + quantity + ' ' + productUnit;
+
+                // Show warning if trying to subtract more than available
+                if (quantity > currentStock) {
+                    $('#stockWarning').show();
+                } else {
+                    $('#stockWarning').hide();
+                }
+            }
+
+            // Update preview
+            $('#previewCurrentStock').text(currentStock + ' ' + productUnit);
+            $('#previewAdjustment').text(adjustmentText);
+            $('#previewNewStock').text(newStock + ' ' + productUnit);
+
+            // Color code the new stock level
+            const newStockElement = $('#previewNewStock');
+            newStockElement.removeClass('new-stock-high new-stock-low new-stock-out');
+
+            if (newStock === 0) {
+                newStockElement.addClass('new-stock-out');
+            } else if (newStock <= minStock) {
+                newStockElement.addClass('new-stock-low');
+            } else {
+                newStockElement.addClass('new-stock-high');
+            }
+
+            $('#adjustmentPreview').show();
+        }
+
+        // Form validation
+        $('#adjustmentForm').on('submit', function (e) {
+            const productId = $('#product_id').val();
+            const adjustmentType = $('input[name="adjustment_type"]:checked').val();
+            const quantity = parseInt($('#quantity').val()) || 0;
+
+            if (!productId) {
+                e.preventDefault();
+                alert('يرجى اختيار المنتج');
+                $('#product_id').focus();
+                return false;
+            }
+
+            if (!adjustmentType) {
+                e.preventDefault();
+                alert('يرجى اختيار نوع التعديل');
+                return false;
+            }
+
+            if (quantity <= 0) {
+                e.preventDefault();
+                alert('يرجى إدخال كمية صحيحة');
+                $('#quantity').focus();
+                return false;
+            }
+
+            if (adjustmentType === 'subtract' && quantity > currentStock) {
+                e.preventDefault();
+                alert('لا يمكن خصم كمية أكبر من المخزون المتاح');
+                $('#quantity').focus();
+                return false;
+            }
+
+            // Confirmation dialog
+            const productName = $('#product_id option:selected').text().split(' - ')[0];
+            const actionText = adjustmentType === 'add' ? 'إضافة' : 'خصم';
+            const message = `هل أنت متأكد من ${actionText} ${quantity} ${productUnit} ${adjustmentType === 'add' ? 'إلى' : 'من'} مخزون ${productName}؟`;
+
+            if (!confirm(message)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Auto-focus on quantity after selecting adjustment type
+        $('input[name="adjustment_type"]').change(function () {
+            $('#quantity').focus();
+        });
+    });
+</script>
+{% endblock %}
