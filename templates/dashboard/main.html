@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}لوحة التحكم - {{ cafe_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.css">
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stats-icon {
+        font-size: 2.5rem;
+        opacity: 0.8;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    }
+
+    .recent-activity {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .activity-item {
+        padding: 10px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+
+    .badge-status {
+        font-size: 0.8rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3 fw-bold text-dark">
+                <i class="fas fa-tachometer-alt me-2 text-primary"></i>
+                لوحة التحكم
+            </h1>
+            <p class="text-muted mb-0">مرحباً {{ current_user.first_name }}، إليك ملخص اليوم</p>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6>مبيعات اليوم</h6>
+                            <h3>{{ "%.2f"|format(stats.today_sales) }} ريال</h3>
+                            <small>{{ stats.today_orders_count }} طلب</small>
+                        </div>
+                        <div>
+                            <i class="fas fa-money-bill-wave fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6>حجوزات اليوم</h6>
+                            <h3>{{ stats.today_bookings }}</h3>
+                            <small>{{ stats.available_rooms }} غرفة متاحة</small>
+                        </div>
+                        <div>
+                            <i class="fas fa-calendar-check fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6>طلبات قيد التحضير</h6>
+                            <h3>{{ stats.pending_orders }}</h3>
+                            <small>يحتاج متابعة</small>
+                        </div>
+                        <div>
+                            <i class="fas fa-clock fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6>حضور اليوم</h6>
+                            <h3>{{ stats.today_attendance }}</h3>
+                            <small>موظف حاضر</small>
+                        </div>
+                        <div>
+                            <i class="fas fa-users fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-line me-2"></i>مبيعات الأسبوع</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="salesChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activities -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-shopping-cart me-2"></i>آخر الطلبات</h5>
+                </div>
+                <div class="card-body">
+                    {% for order in recent_orders %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="mb-1">طلب #{{ order.order_number }}</h6>
+                            <small class="text-muted">{{ "%.2f"|format(order.total_amount) }} ريال</small>
+                        </div>
+                        <span class="badge 
+                            {% if order.status == 'pending' %}bg-warning
+                            {% elif order.status == 'preparing' %}bg-info
+                            {% elif order.status == 'ready' %}bg-success
+                            {% else %}bg-primary{% endif %}">
+                            {{ order.status }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-calendar me-2"></i>آخر الحجوزات</h5>
+                </div>
+                <div class="card-body">
+                    {% for booking in recent_bookings %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="mb-1">{{ booking.room.name }}</h6>
+                            <small class="text-muted">{{ booking.customer_name or 'عميل' }}</small>
+                        </div>
+                        <span class="badge 
+                            {% if booking.status == 'active' %}bg-success
+                            {% else %}bg-secondary{% endif %}">
+                            {{ booking.status }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Sales Chart
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        const salesData = {{ weekly_sales | tojson | safe
+    }} || [];
+
+    // Default data if no sales data
+    const defaultData = [
+        { date: new Date().toISOString().split('T')[0], total: 0 }
+    ];
+
+    const chartData = salesData.length > 0 ? salesData : defaultData;
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartData.map(item => {
+                const date = new Date(item.date);
+                return date.toLocaleDateString('ar-SA', { weekday: 'short' });
+            }),
+            datasets: [{
+                label: 'المبيعات (ريال)',
+                data: chartData.map(item => item.total || 0),
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function (value) {
+                            return value + ' ريال';
+                        }
+                    }
+                }
+            },
+            elements: {
+                point: {
+                    radius: 4,
+                    hoverRadius: 6
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

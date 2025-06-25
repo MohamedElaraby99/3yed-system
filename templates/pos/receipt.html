@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>فاتورة رقم {{ order.order_number }}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            color: #333;
+            background: white;
+        }
+
+        .receipt {
+            max-width: 300px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .order-info {
+            margin-bottom: 15px;
+            border-bottom: 1px dashed #ccc;
+            padding-bottom: 10px;
+        }
+
+        .order-info p {
+            margin-bottom: 3px;
+            font-size: 12px;
+        }
+
+        .items {
+            margin-bottom: 15px;
+        }
+
+        .item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .item-name {
+            flex: 1;
+            margin-left: 10px;
+        }
+
+        .item-qty {
+            width: 30px;
+            text-align: center;
+        }
+
+        .item-price {
+            width: 60px;
+            text-align: left;
+        }
+
+        .totals {
+            border-top: 1px dashed #ccc;
+            padding-top: 10px;
+            margin-bottom: 15px;
+        }
+
+        .total-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        .total-line.final {
+            font-weight: 700;
+            font-size: 14px;
+            border-top: 1px solid #333;
+            padding-top: 5px;
+            margin-top: 10px;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 11px;
+            color: #666;
+            border-top: 1px dashed #ccc;
+            padding-top: 10px;
+        }
+
+        @media print {
+            body {
+                font-size: 12px;
+            }
+
+            .receipt {
+                max-width: none;
+                width: 100%;
+                padding: 10px;
+            }
+
+            @page {
+                size: 80mm auto;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="receipt">
+        <!-- رأس الفاتورة -->
+        <div class="header">
+            <h1>{{ config.CAFE_NAME or 'فكرة كافيه' }}</h1>
+            <p>ورك سبيس وكافيه</p>
+            <p>المملكة العربية السعودية</p>
+            <p>رقم الضريبة: 123456789012345</p>
+        </div>
+
+        <!-- معلومات الطلب -->
+        <div class="order-info">
+            <p><strong>رقم الطلب:</strong> {{ order.order_number }}</p>
+            <p><strong>التاريخ:</strong> {{ order.created_at.strftime('%Y-%m-%d') }}</p>
+            <p><strong>الوقت:</strong> {{ order.created_at.strftime('%H:%M') }}</p>
+            <p><strong>الكاشير:</strong> {{ order.user.first_name }} {{ order.user.last_name }}</p>
+            {% if order.customer_name %}
+            <p><strong>العميل:</strong> {{ order.customer_name }}</p>
+            {% endif %}
+            {% if order.room %}
+            <p><strong>الغرفة:</strong> {{ order.room.name }}</p>
+            {% endif %}
+        </div>
+
+        <!-- عناصر الطلب -->
+        <div class="items">
+            <div class="item">
+                <div class="item-name"><strong>الصنف</strong></div>
+                <div class="item-qty"><strong>الكمية</strong></div>
+                <div class="item-price"><strong>السعر</strong></div>
+            </div>
+            <div style="border-bottom: 1px solid #ccc; margin-bottom: 8px;"></div>
+
+            {% for item in order.items %}
+            <div class="item">
+                <div class="item-name">{{ item.product.name_ar }}</div>
+                <div class="item-qty">{{ item.quantity }}</div>
+                <div class="item-price">{{ "%.2f"|format(item.total_price) }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- المجاميع -->
+        <div class="totals">
+            <div class="total-line">
+                <span>المجموع الفرعي:</span>
+                <span>{{ "%.2f"|format(order.subtotal) }} ريال</span>
+            </div>
+            <div class="total-line">
+                <span>الضريبة (15%):</span>
+                <span>{{ "%.2f"|format(order.tax_amount) }} ريال</span>
+            </div>
+            <div class="total-line final">
+                <span>الإجمالي:</span>
+                <span>{{ "%.2f"|format(order.total_amount) }} ريال</span>
+            </div>
+        </div>
+
+        <!-- معلومات الدفع -->
+        <div class="order-info">
+            <p><strong>طريقة الدفع:</strong> {{ order.payment_method }}</p>
+            <p><strong>حالة الدفع:</strong> {{ order.payment_status }}</p>
+        </div>
+
+        {% if order.notes %}
+        <div class="order-info">
+            <p><strong>ملاحظات:</strong></p>
+            <p>{{ order.notes }}</p>
+        </div>
+        {% endif %}
+
+        <!-- تذييل الفاتورة -->
+        <div class="footer">
+            <p>شكراً لاختياركم فكرة كافيه</p>
+            <p>نتطلع لخدمتكم مرة أخرى</p>
+            <p>---</p>
+            <p>هذه فاتورة إلكترونية معتمدة</p>
+            <p>{{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+        </div>
+    </div>
+
+    <script>
+        // طباعة تلقائية عند تحميل الصفحة
+        window.onload = function () {
+            window.print();
+        };
+    </script>
+</body>
+
+</html>

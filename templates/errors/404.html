@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}الصفحة غير موجودة{% endblock %}
+
+{% block content %}
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 80vh;">
+    <div class="text-center">
+        <div class="error-icon mb-4">
+            <i class="fas fa-search fa-5x text-warning"></i>
+        </div>
+        <h1 class="display-1 fw-bold text-warning">404</h1>
+        <h2 class="mb-4">الصفحة غير موجودة</h2>
+        <p class="lead mb-4">عذراً، الصفحة التي تبحث عنها غير موجودة.</p>
+        <p class="mb-4">ربما تم حذفها أو نقلها أو أن الرابط خاطئ.</p>
+        <a href="{{ url_for('dashboard.main') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-home me-2"></i>العودة للرئيسية
+        </a>
+    </div>
+</div>
+{% endblock %}

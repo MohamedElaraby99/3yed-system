@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+
+{% block title %}الطلبات المباشرة{% endblock %}
+
+{% block extra_css %}
+<style>
+    .orders-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: calc(100vh - 56px);
+        padding: 20px 0;
+    }
+
+    .order-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .order-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    .order-header {
+        padding: 15px 20px;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .order-body {
+        padding: 20px;
+    }
+
+    .order-pending {
+        border-right: 5px solid #ffc107;
+    }
+
+    .order-preparing {
+        border-right: 5px solid #17a2b8;
+    }
+
+    .order-ready {
+        border-right: 5px solid #28a745;
+    }
+
+    .status-badge {
+        font-size: 0.9rem;
+        padding: 8px 15px;
+        border-radius: 20px;
+    }
+
+    .timer {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #dc3545;
+    }
+
+    .btn-action {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 25px;
+        margin: 5px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .stats-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+
+    .stats-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+
+    .refresh-btn {
+        position: fixed;
+        bottom: 30px;
+        left: 30px;
+        z-index: 1000;
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        color: white;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="orders-container">
+    <div class="container-fluid">
+        <!-- رأس الصفحة والإحصائيات -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <h2 class="text-white text-center mb-4">
+                    <i class="fas fa-fire me-2"></i>الطلبات المباشرة
+                </h2>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number">{{ orders|selectattr('status', 'equalto', 'pending')|list|length }}</div>
+                    <div class="text-muted">قيد الانتظار</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number">{{ orders|selectattr('status', 'equalto', 'preparing')|list|length }}
+                    </div>
+                    <div class="text-muted">قيد التحضير</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number">{{ orders|selectattr('status', 'equalto', 'ready')|list|length }}</div>
+                    <div class="text-muted">جاهز للتسليم</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number">{{ orders|length }}</div>
+                    <div class="text-muted">إجمالي الطلبات</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- الطلبات -->
+        {% if orders %}
+        <div class="row">
+            {% for order in orders %}
+            <div class="col-md-6 col-lg-4">
+                <div class="order-card order-{{ order.status }}" data-order-id="{{ order.id }}">
+                    <div class="order-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">طلب #{{ order.order_number }}</h5>
+                            <span class="badge status-badge
+                                {% if order.status == 'pending' %}bg-warning
+                                {% elif order.status == 'preparing' %}bg-info
+                                {% elif order.status == 'ready' %}bg-success{% endif %}">
+                                {% if order.status == 'pending' %}قيد الانتظار
+                                {% elif order.status == 'preparing' %}قيد التحضير
+                                {% elif order.status == 'ready' %}جاهز{% endif %}
+                            </span>
+                        </div>
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            <span class="timer" data-time="{{ order.created_at.isoformat() }}">
+                                {{ (datetime.utcnow() - order.created_at).total_seconds() // 60 }} دقيقة
+                            </span>
+                        </small>
+                    </div>
+
+                    <div class="order-body">
+                        <!-- معلومات العميل -->
+                        {% if order.customer_name or order.room %}
+                        <div class="mb-3">
+                            {% if order.customer_name %}
+                            <p class="mb-1"><i class="fas fa-user me-2"></i>{{ order.customer_name }}</p>
+                            {% endif %}
+                            {% if order.room %}
+                            <p class="mb-1"><i class="fas fa-map-marker-alt me-2"></i>{{ order.room.name }}</p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <!-- عناصر الطلب -->
+                        <div class="mb-3">
+                            <h6>العناصر:</h6>
+                            {% for item in order.items %}
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span>{{ item.quantity }}x {{ item.product.name_ar }}</span>
+                                <span>{{ "%.2f"|format(item.total_price) }} ريال</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- المجموع -->
+                        <div class="d-flex justify-content-between mb-3">
+                            <strong>الإجمالي:</strong>
+                            <strong class="text-primary">{{ "%.2f"|format(order.total_amount) }} ريال</strong>
+                        </div>
+
+                        <!-- ملاحظات -->
+                        {% if order.notes %}
+                        <div class="alert alert-info py-2 mb-3">
+                            <small><i class="fas fa-sticky-note me-1"></i>{{ order.notes }}</small>
+                        </div>
+                        {% endif %}
+
+                        <!-- أزرار التحكم -->
+                        <div class="text-center">
+                            {% if order.status == 'pending' %}
+                            <button class="btn btn-action" onclick="updateStatus({{ order.id }}, 'preparing')">
+                                <i class="fas fa-play me-2"></i>بدء التحضير
+                            </button>
+                            {% elif order.status == 'preparing' %}
+                            <button class="btn btn-action" onclick="updateStatus({{ order.id }}, 'ready')">
+                                <i class="fas fa-check me-2"></i>جاهز
+                            </button>
+                            {% elif order.status == 'ready' %}
+                            <button class="btn btn-action" onclick="updateStatus({{ order.id }}, 'delivered')">
+                                <i class="fas fa-shipping-fast me-2"></i>تم التسليم
+                            </button>
+                            {% endif %}
+
+                            <a href="{{ url_for('pos.order_details', order_id=order.id) }}"
+                                class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-eye me-1"></i>التفاصيل
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="row">
+            <div class="col-12">
+                <div class="text-center text-white py-5">
+                    <i class="fas fa-clipboard-list fa-5x mb-3 opacity-50"></i>
+                    <h3>لا توجد طلبات حالياً</h3>
+                    <p>ستظهر الطلبات الجديدة هنا تلقائياً</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- زر التحديث -->
+<button class="btn refresh-btn" onclick="refreshPage()" title="تحديث">
+    <i class="fas fa-sync-alt"></i>
+</button>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // تحديث المؤقتات كل ثانية
+    function updateTimers() {
+        document.querySelectorAll('.timer').forEach(timer => {
+            const orderTime = new Date(timer.getAttribute('data-time'));
+            const now = new Date();
+            const diffMinutes = Math.floor((now - orderTime) / (1000 * 60));
+
+            timer.textContent = diffMinutes + ' دقيقة';
+
+            // تغيير اللون حسب الوقت
+            if (diffMinutes > 30) {
+                timer.style.color = '#dc3545'; // أحمر
+            } else if (diffMinutes > 15) {
+                timer.style.color = '#fd7e14'; // برتقالي
+            } else {
+                timer.style.color = '#28a745'; // أخضر
+            }
+        });
+    }
+
+    // تشغيل المؤقتات
+    setInterval(updateTimers, 1000);
+    updateTimers();
+
+    // تحديث حالة الطلب
+    function updateStatus(orderId, newStatus) {
+        if (confirm('هل أنت متأكد من تغيير حالة الطلب؟')) {
+            fetch(`/pos/update_status/${orderId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    status: newStatus
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // تحديث البطاقة مباشرة
+                        const orderCard = document.querySelector(`[data-order-id="${orderId}"]`);
+                        if (newStatus === 'delivered') {
+                            orderCard.style.transition = 'all 0.5s ease';
+                            orderCard.style.opacity = '0';
+                            orderCard.style.transform = 'translateX(100%)';
+                            setTimeout(() => {
+                                orderCard.remove();
+                            }, 500);
+                        } else {
+                            location.reload();
+                        }
+                    } else {
+                        alert('خطأ في تحديث حالة الطلب');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('حدث خطأ');
+                });
+        }
+    }
+
+    // تحديث الصفحة
+    function refreshPage() {
+        location.reload();
+    }
+
+    // تحديث تلقائي كل 30 ثانية
+    setInterval(refreshPage, 30000);
+
+    // أصوات التنبيه للطلبات الجديدة
+    let lastOrderCount = {{ orders| length }};
+
+    function checkNewOrders() {
+        fetch('/pos/orders_count')
+            .then(response => response.json())
+            .then(data => {
+                if (data.count > lastOrderCount) {
+                    // صوت تنبيه للطلب الجديد
+                    playNotificationSound();
+                    lastOrderCount = data.count;
+                }
+            });
+    }
+
+    function playNotificationSound() {
+        // يمكن إضافة ملف صوتي هنا
+        if ('Notification' in window) {
+            new Notification('طلب جديد', {
+                body: 'وصل طلب جديد إلى نقطة البيع',
+                icon: '/static/img/notification-icon.png'
+            });
+        }
+    }
+
+    // طلب إذن الإشعارات
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+
+    // فحص الطلبات الجديدة كل 10 ثوان
+    setInterval(checkNewOrders, 10000);
+</script>
+{% endblock %}
